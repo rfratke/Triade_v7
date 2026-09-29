@@ -1,0 +1,3508 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de Planos de Trabalho</title>
+  
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/basecoat-css@1.0.2/dist/basecoat.cdn.min.css">
+  <style>
+/* Skip artifact shell — fixed styles served beside every artifact.
+   Complements basecoat; artifacts override --accent for their own identity. */
+:root {
+  color-scheme: light dark;
+  --accent: #2563eb;
+  --accent-contrast: #ffffff;
+  --accent-text: color-mix(in srgb, var(--accent) 72%, #000);
+  --bg: #f8f9fb;
+  --surface: #ffffff;
+  --text: #14171f;
+  --text-muted: #5b6472;
+  --border: rgba(20, 23, 31, 0.10);
+  --radius: 10px;
+  --shadow: 0 1px 3px rgba(20, 23, 31, 0.08);
+  --space: 16px;
+}
+/* Theme resolution. Without data-theme the viewer's system preference decides,
+   as it always did. With it, the artifact's own choice wins in BOTH directions:
+   a page that hardcodes one palette must not be handed the opposite set of
+   tokens by the machine it happens to be opened on. The dark values appear
+   twice because a media query cannot be folded into a selector list.
+   The attribute sits inside :where() so these blocks keep the specificity of a
+   bare :root — the page's own <style> is linked after this file and must go on
+   overriding any token it wants, exactly as it could before. */
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    --accent-text: color-mix(in srgb, var(--accent) 78%, #fff);
+    --bg: #101318;
+    --surface: #181c23;
+    --text: #eef1f6;
+    --text-muted: #9aa4b2;
+    --border: rgba(238, 241, 246, 0.12);
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+}
+:root:where([data-theme="dark"]) {
+  color-scheme: dark;
+  --accent-text: color-mix(in srgb, var(--accent) 78%, #fff);
+  --bg: #101318;
+  --surface: #181c23;
+  --text: #eef1f6;
+  --text-muted: #9aa4b2;
+  --border: rgba(238, 241, 246, 0.12);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+:root:where([data-theme="light"]) { color-scheme: light; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; display: block; }
+
+.shell-container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+.shell-section { padding: calc(var(--space) * 2) 0; }
+.shell-grid { display: grid; gap: var(--space); grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.shell-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: var(--space); }
+.shell-footer { padding: 24px 0 40px; color: var(--text-muted); font-size: 13px; }
+
+.shell-hero { padding: calc(var(--space) * 3) 0 calc(var(--space) * 2); }
+.shell-hero h1 { font-size: clamp(26px, 4vw, 40px); line-height: 1.15; margin: 0 0 10px; text-wrap: balance; }
+.shell-hero p { color: var(--text-muted); max-width: 60ch; margin: 0; }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--space);
+}
+
+.kpi { display: flex; flex-direction: column; gap: 4px; }
+.kpi .kpi-value { font-size: 28px; font-weight: 650; line-height: 1.1; }
+.kpi .kpi-label { font-size: 13px; color: var(--text-muted); }
+.kpi .kpi-delta { font-size: 12.5px; font-weight: 600; }
+.kpi .kpi-delta.up { color: #0a8f3c; }
+.kpi .kpi-delta.down { color: #cf3131; }
+
+table.shell-table { border-collapse: collapse; width: 100%; font-size: 14px; }
+table.shell-table th {
+  text-align: left; font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--text-muted); font-weight: 600;
+}
+table.shell-table th, table.shell-table td { padding: 9px 12px 9px 0; border-bottom: 1px solid var(--border); }
+table.shell-table td.num, table.shell-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+
+.chart-box { width: 100%; min-height: 220px; }
+.chart-box svg { width: 100%; height: auto; display: block; }
+
+.muted { color: var(--text-muted); }
+.accent { color: var(--accent-text); }
+.shell-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent-text);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .shell-fade { animation: shell-fade 400ms ease both; }
+  @keyframes shell-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+}
+
+</style>
+  
+
+  <style>
+    :root {
+      --accent: #0284c7;
+      --accent-hover: #0369a1;
+      --status-done: #15803d;
+      --status-done-bg: #dcfce7;
+      --status-progress: #0369a1;
+      --status-progress-bg: #e0f2fe;
+      --status-start: #475569;
+      --status-start-bg: #f1f5f9;
+      --status-late: #b91c1c;
+      --status-late-bg: #fee2e2;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+       1. CONSTANTS, UTILITIES & STATE STRUCTURE
+       ========================================== */
+    const STORAGE_KEY = 'planos_state_v1';
+=======
+       10. CONFIGURAÇÕES VIEW (DIRETOR)
+       ========================================== */
+    function renderSettings() {
+      const listEl = document.getElementById('deliveryTypesList');
+      if (!listEl) return;
+=======
+       12. INITIALIZATION ON DOM READY
+       ========================================== */
+    document.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      if (state.currentUser) {
+        setupAppForUser();
+      } else {
+        document.getElementById('loginView').style.display = 'flex';
+        document.getElementById('appView').style.display = 'none';
+      }
+    });
+=======
+    /* ==========================================
+       12. INITIALIZATION ON DOM READY
+       ========================================== */
+    document.addEventListener('DOMContentLoaded', async () => {
+      loadState();
+
+      // Check saved Firebase cloud configuration
+      try {
+        const storedCloud = localStorage.getItem(CLOUD_CONFIG_KEY);
+        if (storedCloud) {
+          cloudConfig = JSON.parse(storedCloud);
+          if (cloudConfig && cloudConfig.databaseURL) {
+            updateCloudStatusUI('local', 'Conectando à nuvem...');
+            try {
+              await pullFromCloud(false, false);
+              setupCloudRealtimeListener();
+              updateCloudStatusUI('connected', 'Sincronização ativa.');
+            } catch (e) {
+              updateCloudStatusUI('error', 'Falha ao reconectar à nuvem: ' + e.message);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Erro ao restaurar configuração de nuvem:', e);
+      }
+
+      if (state.currentUser) {
+        setupAppForUser();
+      } else {
+        document.getElementById('loginView').style.display = 'flex';
+        document.getElementById('appView').style.display = 'none';
+      }
+    });==========================================
+       10. CONFIGURAÇÕES VIEW (DIRETOR) & FIREBASE SYNC
+       ========================================== */
+    function sanitizeDbUrl(url) {
+      if (!url) return '';
+      let clean = String(url).trim();
+      if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
+        clean = 'https://' + clean;
+      }
+      return clean.replace(/\/+$/, '');
+    }
+
+    function parseFirebaseInput(raw) {
+      if (!raw) return null;
+      let str = raw.trim();
+
+      // If full database URL directly
+      if (str.includes('.firebaseio.com') && !str.includes('{') && !str.includes('apiKey')) {
+        return { databaseURL: sanitizeDbUrl(str) };
+      }
+
+      // Try JSON parse first
+      try {
+        const parsed = JSON.parse(str);
+        if (parsed.databaseURL || parsed.projectId) {
+          return {
+            apiKey: parsed.apiKey || '',
+            databaseURL: sanitizeDbUrl(parsed.databaseURL || (parsed.projectId ? `https://${parsed.projectId}-default-rtdb.firebaseio.com` : '')),
+            projectId: parsed.projectId || ''
+          };
+        }
+      } catch (_) {}
+
+      // Relaxed JS object parsing
+      try {
+        // Strip JS variable assignment if present (e.g. const firebaseConfig =)
+        let cleaned = str.replace(/^(?:const|let|var)\s+\w+\s*=\s*/, '').replace(/;\s*$/, '');
+        // Extract databaseURL
+        const dbMatch = cleaned.match(/databaseURL\s*:\s*['"]([^'"]+)['"]/i);
+        const apiMatch = cleaned.match(/apiKey\s*:\s*['"]([^'"]+)['"]/i);
+        const projMatch = cleaned.match(/projectId\s*:\s*['"]([^'"]+)['"]/i);
+
+        let databaseURL = dbMatch ? sanitizeDbUrl(dbMatch[1]) : '';
+        const projectId = projMatch ? projMatch[1].trim() : '';
+        const apiKey = apiMatch ? apiMatch[1].trim() : '';
+
+        if (!databaseURL && projectId) {
+          databaseURL = `https://${projectId}-default-rtdb.firebaseio.com`;
+        }
+
+        if (databaseURL || projectId) {
+          return { databaseURL, projectId, apiKey };
+        }
+      } catch (err) {
+        console.warn('Falha no parse flexível:', err);
+      }
+
+      return null;
+    }
+
+    function updateCloudStatusUI(status, msg = '') {
+      cloudStatus = status;
+      cloudStatusMsg = msg;
+
+      const headerBadge = document.getElementById('headerCloudBadge');
+      const headerText = document.getElementById('headerCloudText');
+      const settingsBadge = document.getElementById('settingsCloudBadge');
+      const settingsText = document.getElementById('settingsCloudText');
+      const feedback = document.getElementById('syncFeedbackMsg');
+
+      let label = 'Modo local';
+      let cls = 'status-local';
+
+      if (status === 'connected') {
+        label = 'Conectado à nuvem';
+        cls = 'status-connected';
+      } else if (status === 'error') {
+        label = 'Erro de conexão';
+        cls = 'status-error';
+      }
+
+      if (headerBadge && headerText) {
+        headerBadge.className = 'cloud-status-badge ' + cls;
+        headerText.textContent = label;
+        headerBadge.title = msg ? `${label}: ${msg}` : label;
+      }
+
+      if (settingsBadge && settingsText) {
+        settingsBadge.className = 'cloud-status-badge ' + cls;
+        settingsText.textContent = label;
+      }
+
+      if (feedback) {
+        if (status === 'connected') {
+          feedback.style.color = 'var(--status-done)';
+          feedback.textContent = msg || 'Conectado com sucesso ao Realtime Database.';
+        } else if (status === 'error') {
+          feedback.style.color = 'var(--status-late)';
+          feedback.textContent = msg || 'Falha ao conectar com a nuvem. Verifique a URL e as permissões.';
+        } else {
+          feedback.style.color = 'var(--text-muted)';
+          feedback.textContent = msg || 'Operando em armazenamento local no navegador.';
+        }
+      }
+    }
+
+    async function connectCloudSync() {
+      if (!isDirector()) {
+        alert('Apenas o perfil Diretor pode configurar a sincronização na nuvem.');
+        return;
+      }
+
+      const textareaVal = document.getElementById('firebaseConfigInput')?.value || '';
+      const urlInputVal = document.getElementById('firebaseDbUrlInput')?.value || '';
+
+      let parsed = parseFirebaseInput(textareaVal);
+      if (!parsed && urlInputVal.trim()) {
+        parsed = { databaseURL: sanitizeDbUrl(urlInputVal) };
+      }
+
+      if (!parsed || !parsed.databaseURL) {
+        updateCloudStatusUI('error', 'Por favor forneça uma Database URL válida do Firebase Realtime Database.');
+        alert('Não foi possível identificar a databaseURL. Cole o objeto de configuração completo do Firebase ou insira a URL direta.');
+        return;
+      }
+
+      cloudConfig = parsed;
+      try {
+        localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify(cloudConfig));
+      } catch (_) {}
+
+      // Test connection by pulling
+      try {
+        updateCloudStatusUI('local', 'Tentando conectar ao Realtime Database...');
+        await pullFromCloud(false, true);
+        setupCloudRealtimeListener();
+        updateCloudStatusUI('connected', 'Sincronização ativa em tempo real.');
+        alert('Conexão com a nuvem estabelecida com sucesso!');
+      } catch (err) {
+        console.error('Erro ao conectar ao Firebase:', err);
+        updateCloudStatusUI('error', 'Erro ao acessar o banco na nuvem: ' + err.message);
+        alert('Não foi possível conectar ao Realtime Database: ' + err.message + '\n\nCertifique-se de que o Realtime Database está criado e em modo de teste (regras de leitura e escrita ativas).');
+      }
+    }
+
+    function disconnectCloudSync() {
+      if (!isDirector()) {
+        alert('Apenas o perfil Diretor pode alterar a sincronização.');
+        return;
+      }
+
+      closeCloudRealtimeListener();
+      cloudConfig = null;
+      try {
+        localStorage.removeItem(CLOUD_CONFIG_KEY);
+      } catch (_) {}
+
+      const inputArea = document.getElementById('firebaseConfigInput');
+      const inputUrl = document.getElementById('firebaseDbUrlInput');
+      if (inputArea) inputArea.value = '';
+      if (inputUrl) inputUrl.value = '';
+
+      updateCloudStatusUI('local', 'Desconectado da nuvem. O aplicativo está operando em modo local.');
+      alert('Sincronização desconectada. Os dados continuam salvos localmente.');
+    }
+
+    async function pushToCloud(showNotice = false) {
+      if (!cloudConfig || !cloudConfig.databaseURL) {
+        if (showNotice) alert('Configure e conecte o Firebase antes de enviar dados.');
+        return;
+      }
+
+      const payload = getSyncPayload();
+      const payloadStr = JSON.stringify(payload);
+      lastSavedHash = payloadStr;
+
+      try {
+        const endpoint = `${cloudConfig.databaseURL}/${RTDB_PATH}.json`;
+        const res = await fetch(endpoint, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: payloadStr
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status} ${res.statusText}`);
+        }
+
+        updateCloudStatusUI('connected', 'Dados sincronizados com a nuvem.');
+        if (showNotice) {
+          alert('Dados locais enviados para a nuvem com sucesso!');
+        }
+      } catch (err) {
+        console.error('Falha no push para nuvem:', err);
+        updateCloudStatusUI('error', 'Falha ao gravar na nuvem: ' + err.message);
+        if (showNotice) {
+          alert('Erro ao enviar dados para a nuvem: ' + err.message);
+        }
+      }
+    }
+
+    async function pullFromCloud(showNotice = false, isInitTest = false) {
+      if (!cloudConfig || !cloudConfig.databaseURL) {
+        if (showNotice) alert('Configure e conecte o Firebase antes de baixar dados.');
+        return;
+      }
+
+      try {
+        const endpoint = `${cloudConfig.databaseURL}/${RTDB_PATH}.json`;
+        const res = await fetch(endpoint, {
+          headers: { 'Accept': 'application/json' }
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status} ${res.statusText}`);
+        }
+
+        const data = await res.json();
+
+        // If cloud is empty and this is initial connection, push local data to seed cloud
+        if (!data || (!data.plans && !data.activities)) {
+          if (isInitTest) {
+            await pushToCloud(false);
+            return;
+          }
+          if (showNotice) {
+            alert('A nuvem ainda não possui dados salvos. Os dados locais foram preservados.');
+          }
+          return;
+        }
+
+        handleRemoteStateChange(data, 'pull');
+        updateCloudStatusUI('connected', 'Dados atualizados da nuvem.');
+        if (showNotice) {
+          alert('Dados baixados da nuvem e aplicados com sucesso!');
+        }
+      } catch (err) {
+        console.error('Falha no pull da nuvem:', err);
+        updateCloudStatusUI('error', 'Falha ao buscar dados na nuvem: ' + err.message);
+        if (showNotice) {
+          alert('Erro ao baixar dados da nuvem: ' + err.message);
+        }
+        if (isInitTest) throw err;
+      }
+    }
+
+    function handleRemoteStateChange(remoteData, source = 'stream') {
+      if (!remoteData) return;
+
+      const remoteHash = JSON.stringify(remoteData);
+
+      // Anti-echo guard: ignore if it matches our own last save
+      if (remoteHash === lastSavedHash) {
+        return;
+      }
+
+      isApplyingRemoteChange = true;
+      try {
+        // Preserve current user session
+        const curr = state ? state.currentUser : null;
+
+        const migrated = migrate(remoteData);
+        state = {
+          ...migrated,
+          currentUser: curr
+        };
+
+        // If currentUser was deleted or role changed remotely, handle gracefully
+        if (curr) {
+          const match = state.users.find(u => u.id === curr.id || u.email === curr.email);
+          if (match) {
+            state.currentUser = { ...match };
+            delete state.currentUser.passHash;
+          }
+        }
+
+        // Persist to local storage
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        lastSavedHash = JSON.stringify(getSyncPayload());
+
+        // Re-render UI
+        if (state.currentUser) {
+          populateFilterOptions();
+          showView(currentViewId);
+        }
+      } catch (err) {
+        console.error('Erro ao aplicar atualização remota:', err);
+      } finally {
+        isApplyingRemoteChange = false;
+      }
+    }
+
+    function setupCloudRealtimeListener() {
+      closeCloudRealtimeListener();
+      if (!cloudConfig || !cloudConfig.databaseURL) return;
+
+      const streamUrl = `${cloudConfig.databaseURL}/${RTDB_PATH}.json`;
+
+      // 1. Try EventSource (SSE native support in Firebase Realtime Database)
+      try {
+        cloudEventSource = new EventSource(streamUrl);
+
+        cloudEventSource.addEventListener('put', (e) => {
+          try {
+            const parsed = JSON.parse(e.data);
+            if (parsed && parsed.data) {
+              handleRemoteStateChange(parsed.data, 'eventsource_put');
+            }
+          } catch (_) {}
+        });
+
+        cloudEventSource.addEventListener('patch', (e) => {
+          // Fallback to fetch on partial patch
+          pullFromCloud(false);
+        });
+
+        cloudEventSource.onerror = (err) => {
+          // SSE may drop on CORS if unauthenticated, fallback to polling
+          console.warn('EventSource avisou erro, alternando para polling periódico:', err);
+        };
+      } catch (e) {
+        console.warn('EventSource não pôde ser instanciado:', e);
+      }
+
+      // 2. Periodic poll as robust cross-device fallback (every 10 seconds)
+      cloudPollInterval = setInterval(() => {
+        if (cloudStatus === 'connected' && cloudConfig) {
+          pullFromCloud(false).catch(() => {});
+        }
+      }, 10000);
+    }
+
+    function closeCloudRealtimeListener() {
+      if (cloudEventSource) {
+        try { cloudEventSource.close(); } catch (_) {}
+        cloudEventSource = null;
+      }
+      if (cloudPollInterval) {
+        clearInterval(cloudPollInterval);
+        cloudPollInterval = null;
+      }
+    }
+
+    function renderSettings() {
+      const listEl = document.getElementById('deliveryTypesList');
+      if (!listEl) return;==========================================
+       1. CONSTANTS, UTILITIES & STATE STRUCTURE
+       ========================================== */
+    const STORAGE_KEY = 'planos_state_v1';
+    const CLOUD_CONFIG_KEY = 'planos_firebase_config_v1';
+    const RTDB_PATH = 'planos_state_v1';
+
+    // BroadcastChannel for instant local cross-tab sync
+    let syncChannel = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        syncChannel = new BroadcastChannel('planos_tab_channel');
+        syncChannel.onmessage = (evt) => {
+          if (evt.data && evt.data.type === 'STATE_UPDATED') {
+            handleRemoteStateChange(evt.data.payload, 'broadcast');
+          }
+        };
+      }
+    } catch (e) {
+      console.warn('BroadcastChannel não disponível:', e);
+    }Top Navigation & App Layout */
+    .app-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      padding: 0 1rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.1rem;
+      box-shadow: 0 2px 4px rgba(2, 132, 199, 0.25);
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      overflow-x: auto;
+      padding: 4px 0;
+    }
+
+    .nav-btn {
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .nav-btn:hover {
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .nav-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      padding: 4px 8px;
+      border-radius: 20px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+    }
+
+    /* Cloud Sync Status Badge */
+    .cloud-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .cloud-status-badge.status-local {
+      background: #fef9c3;
+      color: #854d0e;
+      border: 1px solid #fde047;
+    }
+    .cloud-status-badge.status-connected {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+    .cloud-status-badge.status-error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+    .cloud-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .user-role-badge {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .role-director {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .role-collab {
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+
+    /* Views container */
+    .app-main {
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 3rem;
+      box-sizing: border-box;
+    }
+
+    .view-pane {
+      display: none;
+      animation: fadeIn 0.2s ease-in-out;
+    }
+
+    .view-pane.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Cards & Panels */
+    .card-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 1rem;
+    }
+
+    .panel-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin: 0;
+      color: var(--text);
+    }
+
+    /* Badges */
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .badge-done { background: var(--status-done-bg); color: var(--status-done); }
+    .badge-progress { background: var(--status-progress-bg); color: var(--status-progress); }
+    .badge-start { background: var(--status-start-bg); color: var(--status-start); }
+    .badge-late { background: var(--status-late-bg); color: var(--status-late); }
+
+    .tag-delivery {
+      font-size: 0.75rem;
+      background: #f3f4f6;
+      color: #374151;
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid #e5e7eb;
+      font-weight: 500;
+    }
+
+    /* Buttons */
+    .btn-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary-action {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+    }
+
+    .btn-primary-action:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-secondary-action {
+      background: var(--surface);
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    .btn-secondary-action:hover {
+      background: var(--bg);
+    }
+
+    .btn-danger-action {
+      background: #fee2e2;
+      border-color: #fca5a5;
+      color: #991b1b;
+    }
+
+    .btn-danger-action:hover {
+      background: #fecaca;
+    }
+
+    .btn-sm {
+      padding: 4px 8px;
+      font-size: 0.8rem;
+    }
+
+    /* Tables */
+    .table-container {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .custom-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    .custom-table th {
+      background: var(--bg);
+      padding: 12px 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .custom-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .custom-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .custom-table tr:hover td {
+      background-color: rgba(2, 132, 199, 0.02);
+    }
+
+    /* Filters row */
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+      align-items: center;
+    }
+
+    .filter-row select,
+    .filter-row input {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.88rem;
+      min-width: 150px;
+    }
+
+    /* Modals */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(2px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s ease, visibility 0.2s;
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-box {
+      background: var(--surface);
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      width: 100%;
+      max-width: 600px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: scale(0.97);
+      transition: transform 0.2s ease;
+    }
+
+    .modal-backdrop.open .modal-box {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .modal-close-btn {
+      background: none;
+      border: none;
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      background: var(--bg);
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.9rem;
+      box-sizing: border-box;
+    }
+
+    .form-control:focus {
+      outline: 2px solid var(--accent);
+      border-color: var(--accent);
+    }
+
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* Timeline groups */
+    .timeline-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .timeline-group-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 6px;
+      margin-bottom: 10px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .timeline-group-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .timeline-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      transition: box-shadow 0.15s ease;
+    }
+
+    .timeline-card:hover {
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+    .timeline-card.border-late { border-left-color: var(--status-late); }
+    .timeline-card.border-progress { border-left-color: var(--status-progress); }
+    .timeline-card.border-done { border-left-color: var(--status-done); }
+    .timeline-card.border-start { border-left-color: var(--status-start); }
+
+    /* Login view specific */
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    }
+
+    .login-box {
+      width: 100%;
+      max-width: 440px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.25rem 2rem;
+      box-shadow: 0 10px 30px rgba(2, 132, 199, 0.1);
+    }
+
+    .demo-users-box {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px dashed #cbd5e1;
+      font-size: 0.82rem;
+    }
+
+    .demo-user-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      cursor: pointer;
+    }
+
+    .demo-user-item:hover {
+      border-color: var(--accent);
+      background: #f0f9ff;
+    }
+
+    /* Print styles */
+    @media print {
+      .app-header,
+      .filter-row,
+      .btn-action,
+      .no-print,
+      .modal-backdrop {
+        display: none !important;
+      }
+
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+
+      .app-main {
+        max-width: 100% !important;
+        padding: 0 !important;
+      }
+
+      .card-panel {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+      }
+
+      .custom-table {
+        border: 1px solid #999 !important;
+      }
+
+      .custom-table th, .custom-table td {
+        border: 1px solid #ddd !important;
+        color: #000 !important;
+      }
+
+      .print-header {
+        display: block !important;
+        margin-bottom: 20px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .header-inner {
+        flex-direction: column;
+        height: auto;
+        padding: 10px;
+        gap: 10px;
+      }
+      .nav-tabs {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .form-grid-2 {
+        grid-template-columns: 1fr;
+      }
+      .timeline-card {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN VIEW -->
+  <div id="loginView" class="login-container">
+    <div class="login-box">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div class="brand-icon" style="width: 48px; height: 48px; margin: 0 auto 12px; font-size: 1.5rem;">PT</div>
+        <h1 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 6px;">Gestão de Planos de Trabalho</h1>
+        <p style="font-size: 0.88rem; color: var(--text-muted); margin: 0;">Acesse com perfil de Diretor ou Colaborador</p>
+      </div>
+
+      <form id="loginForm" onsubmit="event.preventDefault(); handleLogin();">
+        <div class="form-group">
+          <label for="loginEmail">E-mail / Login</label>
+          <input type="text" id="loginEmail" class="form-control" placeholder="ex: diretor@demo" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="loginPass">Senha</label>
+          <input type="password" id="loginPass" class="form-control" placeholder="Sua senha" required autocomplete="current-password">
+        </div>
+        <div id="loginError" style="display:none; color: #b91c1c; font-size: 0.82rem; margin-bottom: 10px; font-weight: 500;">
+          Credenciais inválidas. Tente um dos usuários de teste abaixo.
+        </div>
+        <button type="submit" class="btn-action btn-primary-action" style="width: 100%; padding: 10px; font-size: 1rem;">
+          Entrar no Sistema
+        </button>
+      </form>
+
+      <div class="demo-users-box">
+        <div style="font-weight: 600; color: var(--text); margin-bottom: 6px;">Contas Demo para Teste Rápido (clique para preencher):</div>
+        <div class="demo-user-item" onclick="fillLogin('diretor@demo', 'admin')">
+          <div>
+            <strong>diretor@demo</strong> <span class="user-role-badge role-director">Diretor</span>
+          </div>
+          <span style="color:var(--text-muted)">senha: admin</span>
+        </div>
+        <div class="demo-user-item" onclick="fillLogin('carlos@demo', '1234')">
+          <div>
+            <strong>carlos@demo</strong> <span class="user-role-badge role-collab">Colaborador</span>
+          </div>
+          <span style="color:var(--text-muted)">senha: 1234</span>
+        </div>
+        <div class="demo-user-item" onclick="fillLogin('marina@demo', '1234')">
+          <div>
+            <strong>marina@demo</strong> <span class="user-role-badge role-collab">Colaboradora</span>
+          </div>
+          <span style="color:var(--text-muted)">senha: 1234</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP VIEW -->
+  <div id="appView" style="display: none; flex-direction: column; min-height: 100vh;">
+    <!-- HEADER -->
+    <header class="app-header">
+      <div class="header-inner">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <a href="#" class="brand-title" onclick="event.preventDefault(); showView('dashboard');">
+            <span class="brand-icon">PT</span>
+            <span>Gestão de Planos</span>
+          </a>
+        </div>
+
+        <nav class="nav-tabs" id="mainNav">
+          <!-- Rendered dynamically depending on role -->
+        </nav>
+
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <div id="headerCloudBadge" class="cloud-status-badge status-local" title="Status da sincronização entre dispositivos">
+            <span class="cloud-status-dot"></span>
+            <span id="headerCloudText">Modo local</span>
+          </div>
+          <div class="user-pill">
+            <span id="headerUserName" style="font-weight: 600;"></span>
+            <span id="headerUserRole" class="user-role-badge"></span>
+          </div>
+          <button class="btn-action btn-secondary-action btn-sm" onclick="logout()" title="Sair do sistema">
+            Sair
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <main class="app-main">
+      <!-- Hidden file inputs -->
+      <input type="file" id="planFileInput" accept=".txt,.csv,.pdf" style="display: none;" onchange="handlePlanFileUpload(event)">
+
+      <!-- DASHBOARD VIEW -->
+      <section id="view-dashboard" class="view-pane">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Painel de Indicadores</h2>
+            <p style="color: var(--text-muted); font-size: 0.88rem; margin: 2px 0 0;">Acompanhamento global de planos e entregas de atividades</p>
+          </div>
+        </div>
+
+        <!-- KPIS -->
+        <div class="shell-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 1.5rem;">
+          <div class="panel kpi">
+            <span class="kpi-label">Total de Atividades</span>
+            <span class="kpi-value" id="kpi-total">0</span>
+          </div>
+          <div class="panel kpi">
+            <span class="kpi-label">Finalizadas</span>
+            <span class="kpi-value" id="kpi-done" style="color: var(--status-done);">0</span>
+          </div>
+          <div class="panel kpi">
+            <span class="kpi-label">Em Andamento</span>
+            <span class="kpi-value" id="kpi-progress" style="color: var(--status-progress);">0</span>
+          </div>
+          <div class="panel kpi">
+            <span class="kpi-label">Em Atraso</span>
+            <span class="kpi-value" id="kpi-late" style="color: var(--status-late);">0</span>
+          </div>
+        </div>
+
+        <!-- CRONOGRAMA AGRUPADO -->
+        <div class="card-panel">
+          <div class="panel-header">
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Cronograma de Entregas por Prazo</h3>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Organizado pela proximidade do término</span>
+          </div>
+          <div id="timelineContainer">
+            <!-- Rendered timeline groups -->
+          </div>
+        </div>
+      </section>
+
+      <!-- PLANOS VIEW (DIRETOR) -->
+      <section id="view-plans" class="view-pane">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Planos de Trabalho</h2>
+            <p style="color: var(--text-muted); font-size: 0.88rem; margin: 2px 0 0;">Crie ou importe planos de trabalho e distribua atividades para a equipe</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-action btn-secondary-action" onclick="triggerPlanUpload()">
+              📄 Importar Plano (.txt / .csv / .pdf)
+            </button>
+            <button class="btn-action btn-primary-action" onclick="openPlanModal()">
+              + Novo Plano Manual
+            </button>
+          </div>
+        </div>
+
+        <div id="plansListContainer">
+          <!-- Rendered list of plans -->
+        </div>
+      </section>
+
+      <!-- ATIVIDADES VIEW -->
+      <section id="view-activities" class="view-pane">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title" id="activitiesTitle">Quadro Geral de Atividades</h2>
+            <p style="color: var(--text-muted); font-size: 0.88rem; margin: 2px 0 0;">Gestão detalhada, prazos, entregáveis e responsáveis</p>
+          </div>
+          <div id="activityActions">
+            <button class="btn-action btn-primary-action" onclick="openActivityModal()">
+              + Nova Atividade
+            </button>
+          </div>
+        </div>
+
+        <!-- FILTROS -->
+        <div class="card-panel" style="padding: 1rem; margin-bottom: 1rem;">
+          <div class="filter-row" style="margin-bottom: 0;">
+            <div style="flex: 1; min-width: 180px;">
+              <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:4px;">Buscar por nome</label>
+              <input type="text" id="filterActSearch" placeholder="Digite para filtrar..." oninput="renderActivities()" style="width: 100%;">
+            </div>
+            <div id="filterCollabWrapper">
+              <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:4px;">Responsável</label>
+              <select id="filterActCollab" onchange="renderActivities()">
+                <option value="">Todos os Responsáveis</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:4px;">Plano de Trabalho</label>
+              <select id="filterActPlan" onchange="renderActivities()">
+                <option value="">Todos os Planos</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:4px;">Condição / Status</label>
+              <select id="filterActStatus" onchange="renderActivities()">
+                <option value="">Todos os Status</option>
+                <option value="Iniciado">Iniciado</option>
+                <option value="Em andamento">Em andamento</option>
+                <option value="Finalizado">Finalizado</option>
+                <option value="Em atraso">Em atraso</option>
+              </select>
+            </div>
+            <div style="align-self: flex-end;">
+              <button class="btn-action btn-secondary-action btn-sm" onclick="clearActivityFilters()">Limpar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TABELA DE ATIVIDADES -->
+        <div class="table-container">
+          <table class="custom-table" id="activitiesTable">
+            <thead>
+              <tr>
+                <th>Atividade</th>
+                <th>Plano</th>
+                <th>Tipo de Entrega</th>
+                <th>Responsável</th>
+                <th>Início</th>
+                <th>Final</th>
+                <th>Status</th>
+                <th style="text-align: right;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="activitiesTbody">
+              <!-- Rendered items -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- COLABORADORES VIEW (DIRETOR) -->
+      <section id="view-collaborators" class="view-pane">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Equipe e Colaboradores</h2>
+            <p style="color: var(--text-muted); font-size: 0.88rem; margin: 2px 0 0;">Gerencie os membros da equipe e credenciais de acesso</p>
+          </div>
+          <button class="btn-action btn-primary-action" onclick="openCollabModal()">
+            + Novo Colaborador
+          </button>
+        </div>
+
+        <div class="table-container">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>E-mail (Login)</th>
+                <th>Cargo / Função</th>
+                <th>Perfil</th>
+                <th>Atividades Atribuídas</th>
+                <th style="text-align: right;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="collabTbody">
+              <!-- Rendered collaborators -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- RELATÓRIO VIEW -->
+      <section id="view-reports" class="view-pane">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Relatório Geral de Atividades</h2>
+            <p style="color: var(--text-muted); font-size: 0.88rem; margin: 2px 0 0;">Visão consolidada para auditoria, impressão e exportação</p>
+          </div>
+          <div style="display: flex; gap: 8px;" class="no-print">
+            <button class="btn-action btn-secondary-action" onclick="exportCSV()">
+              📥 Baixar planilha (.csv)
+            </button>
+            <button class="btn-action btn-primary-action" onclick="printReport()">
+              🖨️ Imprimir / Salvar PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- FILTROS DE RELATÓRIO -->
+        <div class="card-panel no-print" style="padding: 1rem; margin-bottom: 1.5rem;">
+          <div class="filter-row" style="margin-bottom: 0;">
+            <div>
+              <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:4px;">Filtrar por Plano</label>
+              <select id="repFilterPlan" onchange="renderReports()">
+                <option value="">Todos os Planos</option>
+              </select>
+            </div>
+            <div id="repFilterCollabWrapper">
+              <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:4px;">Filtrar por Responsável</label>
+              <select id="repFilterCollab" onchange="renderReports()">
+                <option value="">Todos os Responsáveis</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-panel">
+          <div class="print-header" style="display:none; margin-bottom: 15px;">
+            <h2 style="margin:0 0 4px 0;">Relatório de Execução de Planos de Trabalho</h2>
+            <div style="font-size: 0.85rem; color: #555;" id="printDateGenerated"></div>
+          </div>
+
+          <div class="table-container">
+            <table class="custom-table" id="reportTable">
+              <thead>
+                <tr>
+                  <th>Plano</th>
+                  <th>Atividade</th>
+                  <th>Tipo de Entrega</th>
+                  <th>Responsável</th>
+                  <th>Início</th>
+                  <th>Término</th>
+                  <th>Condição</th>
+                </tr>
+              </thead>
+              <tbody id="reportTbody">
+                <!-- Rendered reports -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONFIGURAÇÕES VIEW (DIRETOR) -->
+      <section id="view-settings" class="view-pane">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Configurações do Sistema</h2>
+            <p style="color: var(--text-muted); font-size: 0.88rem; margin: 2px 0 0;">Parâmetros gerais, tipos de entrega e restauração de dados</p>
+          </div>
+        </div>
+
+        <!-- SINCRONIZAÇÃO NA NUVEM (DIRETOR) -->
+        <div class="card-panel" style="margin-bottom: 1.5rem;">
+          <div class="panel-header" style="margin-bottom: 0.75rem;">
+            <div>
+              <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0; color: var(--text);">
+                ☁️ Sincronização na Nuvem (Multi-dispositivos)
+              </h3>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin: 3px 0 0;">
+                Conecte o Realtime Database para sincronizar colaboradores, planos e atividades entre diferentes computadores e celulares em tempo real.
+              </p>
+            </div>
+            <div id="settingsCloudBadge" class="cloud-status-badge status-local">
+              <span class="cloud-status-dot"></span>
+              <span id="settingsCloudText">Modo local</span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;" class="form-grid-2">
+            <div>
+              <div class="form-group">
+                <label for="firebaseConfigInput">Objeto de Configuração do Firebase (JSON ou JavaScript)</label>
+                <textarea id="firebaseConfigInput" class="form-control" rows="8" placeholder='Cole aqui o objeto firebaseConfig do seu console:&#10;{&#10;  "apiKey": "AIzaSy...",&#10;  "databaseURL": "https://seu-projeto-default-rtdb.firebaseio.com",&#10;  "projectId": "seu-projeto"&#10;}' style="font-family: monospace; font-size: 0.82rem;"></textarea>
+                <small style="color: var(--text-muted); font-size: 0.76rem; display: block; margin-top: 4px;">
+                  Aceita objeto com chaves, sem chaves, aspas simples ou duplas. O campo essencial é o <code>databaseURL</code>.
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label for="firebaseDbUrlInput">Ou informe diretamente a Database URL</label>
+                <input type="text" id="firebaseDbUrlInput" class="form-control" placeholder="https://seu-projeto-default-rtdb.firebaseio.com" style="font-family: monospace; font-size: 0.85rem;">
+              </div>
+
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 1rem;">
+                <button class="btn-action btn-primary-action" onclick="connectCloudSync()">
+                  ⚡ Conectar à nuvem
+                </button>
+                <button class="btn-action btn-secondary-action" onclick="disconnectCloudSync()">
+                  🔌 Desconectar
+                </button>
+                <button class="btn-action btn-secondary-action" onclick="pushToCloud(true)" title="Subscreve a nuvem com os dados locais atuais">
+                  ⬆️ Enviar dados locais para a nuvem
+                </button>
+                <button class="btn-action btn-secondary-action" onclick="pullFromCloud(true)" title="Subscreve os dados locais com o que está na nuvem">
+                  ⬇️ Baixar dados da nuvem
+                </button>
+              </div>
+              <div id="syncFeedbackMsg" style="margin-top: 10px; font-size: 0.82rem; min-height: 1.2rem;"></div>
+            </div>
+
+            <!-- TELA DE AJUDA / GUIA PASSO A PASSO -->
+            <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+              <h4 style="margin: 0 0 8px; font-size: 0.95rem; font-weight: 700; color: var(--text);">
+                📖 Instruções de Configuração Rápida (Firebase Gratuito)
+              </h4>
+              <ol style="margin: 0; padding-left: 1.25rem; font-size: 0.82rem; line-height: 1.5; color: var(--text);">
+                <li style="margin-bottom: 6px;">
+                  Acesse <strong>console.firebase.google.com</strong> e clique em <em>Adicionar projeto</em> (gratuito, sem necessidade de cartão de crédito).
+                </li>
+                <li style="margin-bottom: 6px;">
+                  No menu lateral esquerdo, vá em <strong>Build &gt; Realtime Database</strong> e clique em <strong>Criar banco de dados</strong>.
+                </li>
+                <li style="margin-bottom: 6px;">
+                  Ao escolher as regras de segurança, selecione <strong>Modo de teste</strong> (habilita leitura e escrita).
+                </li>
+                <li style="margin-bottom: 6px;">
+                  Vá na engrenagem de <strong>Configurações do Projeto</strong> (Geral) &gt; adicione um app Web (&lt;/&gt;) e copie o código <code>firebaseConfig = { ... }</code>.
+                </li>
+                <li style="margin-bottom: 6px;">
+                  Cole o bloco copiado no campo ao lado e clique em <strong>Conectar à nuvem</strong>.
+                </li>
+              </ol>
+              <div style="margin-top: 10px; padding: 8px 10px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; font-size: 0.77rem; color: #92400e;">
+                ⚠️ <strong>Aviso de Segurança:</strong> As regras em modo de teste deixam o banco aberto a qualquer usuário com a URL. Em ambientes de produção reais, restrinja as regras de acesso no console.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="shell-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+          <!-- TIPOS DE ENTREGA -->
+          <div class="card-panel">
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem;">Tipos de Entrega</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+              Personalize as categorias de produtos e entregas aceitas no cadastro de atividades.
+            </p>
+            <div style="display: flex; gap: 8px; margin-bottom: 1rem;">
+              <input type="text" id="newDeliveryTypeInput" class="form-control" placeholder="Novo tipo (ex: Auditoria, Parecer)">
+              <button class="btn-action btn-primary-action" onclick="addDeliveryType()">Adicionar</button>
+            </div>
+            <div id="deliveryTypesList" style="display: flex; flex-direction: column; gap: 6px;">
+              <!-- Rendered delivery tags with remove buttons -->
+            </div>
+          </div>
+
+          <!-- DADOS E RESET -->
+          <div class="card-panel">
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem;">Dados e Armazenamento</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+              Os dados deste sistema estão armazenados com persistência local neste navegador sob a chave <code>planos_state_v1</code>.
+            </p>
+            <div style="padding: 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; margin-bottom: 1.25rem;">
+              <strong style="color: #92400e; font-size: 0.88rem;">Atenção:</strong>
+              <p style="font-size: 0.82rem; color: #b45309; margin: 4px 0 0;">
+                O reset recarregará os colaboradores de demonstração, 2 planos de trabalho e atividades de exemplo.
+              </p>
+            </div>
+            <button class="btn-action btn-danger-action" onclick="handleResetDemo()">
+              ⚠️ Restaurar Dados de Demonstração
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- GENERIC MODAL OVERLAY -->
+  <div id="modalOverlay" class="modal-backdrop" onclick="handleBackdropClick(event)">
+    <div class="modal-box" id="modalBox" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">Modal</h3>
+        <button class="modal-close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modalContent">
+        <!-- Content injected here -->
+      </div>
+      <div class="modal-footer" id="modalFooter">
+        <!-- Buttons injected here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- APPLICATION LOGIC -->
+  <script>
+    /* ==========================================
+       1. CONSTANTS, UTILITIES & STATE STRUCTURE
+       ========================================== */
+    const STORAGE_KEY = 'planos_state_v1';
+
+    // Simple djb2 hash to avoid plain text comparison in memory
+    function hashPass(str) {
+      let hash = 5381;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash) + str.charCodeAt(i);
+        hash = hash & hash;
+      }
+      return (hash >>> 0).toString(16);
+    }
+
+    function uid() {
+      return 'id_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+    }
+
+    function esc(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function hojeISO() {
+      const d = new Date();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${d.getFullYear()}-${month}-${day}`;
+    }
+
+    function fmtData(isoStr) {
+      if (!isoStr || !/^\d{4}-\d{2}-\d{2}$/.test(isoStr)) return '-';
+      const [y, m, d] = isoStr.split('-');
+      return `${d}/${m}/${y}`;
+    }
+
+    function addDaysISO(isoStr, days) {
+      const d = new Date(isoStr + 'T00:00:00');
+      d.setDate(d.getDate() + days);
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${d.getFullYear()}-${m}-${day}`;
+    }
+
+    // Default Seed Data
+    function getSeedData() {
+      const directorId = 'user_dir_1';
+      const c1Id = 'user_collab_1';
+      const c2Id = 'user_collab_2';
+      const c3Id = 'user_collab_3';
+
+      const plan1Id = 'plan_1';
+      const plan2Id = 'plan_2';
+
+      const today = hojeISO();
+
+      return {
+        version: 1,
+        currentUser: null,
+        deliveryTypes: [
+          'Relatório',
+          'Documento',
+          'Apresentação',
+          'Reunião',
+          'Produto/Material',
+          'Outro'
+        ],
+        users: [
+          {
+            id: directorId,
+            nome: 'Ana Ribeiro (Diretora)',
+            email: 'diretor@demo',
+            passHash: hashPass('admin'),
+            cargo: 'Diretora Geral',
+            role: 'director' // 'director' | 'collab'
+          },
+          {
+            id: c1Id,
+            nome: 'Carlos Eduardo',
+            email: 'carlos@demo',
+            passHash: hashPass('1234'),
+            cargo: 'Analista de Planejamento',
+            role: 'collab'
+          },
+          {
+            id: c2Id,
+            nome: 'Marina Santos',
+            email: 'marina@demo',
+            passHash: hashPass('1234'),
+            cargo: 'Coordenadora de Projetos',
+            role: 'collab'
+          },
+          {
+            id: c3Id,
+            nome: 'Lucas Mendes',
+            email: 'lucas@demo',
+            passHash: hashPass('1234'),
+            cargo: 'Especialista Técnico',
+            role: 'collab'
+          }
+        ],
+        plans: [
+          {
+            id: plan1Id,
+            nome: 'Implantação do Sistema Integrado 2025',
+            descricao: 'Modernização da infraestrutura digital e integração dos setores operacionais.'
+          },
+          {
+            id: plan2Id,
+            nome: 'Reformulação do Portal Institucional e Transparência',
+            descricao: 'Atualização do canal público com adequação às novas diretrizes de acessibilidade.'
+          }
+        ],
+        activities: [
+          {
+            id: uid(),
+            planId: plan1Id,
+            nome: 'Levantamento de Requisitos Técnicos',
+            tipoEntrega: 'Documento',
+            dataInicio: addDaysISO(today, -30),
+            dataFinal: addDaysISO(today, -15),
+            responsavelId: c1Id,
+            status: 'Finalizado'
+          },
+          {
+            id: uid(),
+            planId: plan1Id,
+            nome: 'Definição da Arquitetura do Banco de Dados',
+            tipoEntrega: 'Documento',
+            dataInicio: addDaysISO(today, -14),
+            dataFinal: addDaysISO(today, -2),
+            responsavelId: c3Id,
+            status: 'Iniciado' // will evaluate as late
+          },
+          {
+            id: uid(),
+            planId: plan1Id,
+            nome: 'Workshop de Alinhamento com Lideranças',
+            tipoEntrega: 'Reunião',
+            dataInicio: addDaysISO(today, -5),
+            dataFinal: addDaysISO(today, 3),
+            responsavelId: c2Id,
+            status: 'Em andamento'
+          },
+          {
+            id: uid(),
+            planId: plan1Id,
+            nome: 'Entrega da Primeira Versão de Testes (Homologação)',
+            tipoEntrega: 'Produto/Material',
+            dataInicio: addDaysISO(today, 2),
+            dataFinal: addDaysISO(today, 12),
+            responsavelId: c3Id,
+            status: 'Iniciado'
+          },
+          {
+            id: uid(),
+            planId: plan1Id,
+            nome: 'Relatório Trimestral de Progresso da Implantação',
+            tipoEntrega: 'Relatório',
+            dataInicio: addDaysISO(today, 10),
+            dataFinal: addDaysISO(today, 28),
+            responsavelId: c1Id,
+            status: 'Iniciado'
+          },
+          {
+            id: uid(),
+            planId: plan2Id,
+            nome: 'Diagnóstico de Usabilidade e Acessibilidade do Portal',
+            tipoEntrega: 'Relatório',
+            dataInicio: addDaysISO(today, -25),
+            dataFinal: addDaysISO(today, -5),
+            responsavelId: c2Id,
+            status: 'Finalizado'
+          },
+          {
+            id: uid(),
+            planId: plan2Id,
+            nome: 'Criação dos Mockups e Guia de Estilos Visuais',
+            tipoEntrega: 'Apresentação',
+            dataInicio: addDaysISO(today, -7),
+            dataFinal: addDaysISO(today, 4),
+            responsavelId: c1Id,
+            status: 'Em andamento'
+          },
+          {
+            id: uid(),
+            planId: plan2Id,
+            nome: 'Aprovação das Minutas de Conteúdo pela Diretoria',
+            tipoEntrega: 'Documento',
+            dataInicio: addDaysISO(today, -10),
+            dataFinal: addDaysISO(today, -1),
+            responsavelId: directorId,
+            status: 'Em andamento' // will evaluate as late
+          },
+          {
+            id: uid(),
+            planId: plan2Id,
+            nome: 'Treinamento dos Editores de Conteúdo',
+            tipoEntrega: 'Reunião',
+            dataInicio: addDaysISO(today, 15),
+            dataFinal: addDaysISO(today, 40),
+            responsavelId: c2Id,
+            status: 'Iniciado'
+          },
+          {
+            id: uid(),
+            planId: plan2Id,
+            nome: 'Lançamento Público do Novo Portal',
+            tipoEntrega: 'Produto/Material',
+            dataInicio: addDaysISO(today, 30),
+            dataFinal: addDaysISO(today, 50),
+            responsavelId: c3Id,
+            status: 'Iniciado'
+          }
+        ]
+      };
+    }
+
+    let state = null;
+
+    function migrate(raw) {
+      if (!raw || !raw.version) return getSeedData();
+      return raw;
+    }
+
+    // Cloud sync manager state
+    let cloudConfig = null;
+    let cloudStatus = 'local'; // 'local' | 'connected' | 'error'
+    let cloudStatusMsg = '';
+    let lastSavedHash = '';
+    let cloudEventSource = null;
+    let cloudPollInterval = null;
+    let isApplyingRemoteChange = false;
+
+    function getSyncPayload() {
+      if (!state) return null;
+      return {
+        version: state.version || 1,
+        deliveryTypes: state.deliveryTypes || [],
+        users: state.users || [],
+        plans: state.plans || [],
+        activities: state.activities || [],
+        updatedAt: Date.now()
+      };
+    }
+
+    function loadState() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) {
+          state = getSeedData();
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } else {
+          state = migrate(JSON.parse(stored));
+        }
+      } catch (e) {
+        console.error('Erro ao carregar estado do localStorage:', e);
+        state = getSeedData();
+      }
+
+      // Record initial hash
+      try {
+        lastSavedHash = JSON.stringify(getSyncPayload());
+      } catch (_) {}
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.error('Erro ao salvar no localStorage:', e);
+      }
+
+      // Sync across tabs
+      const payload = getSyncPayload();
+      const currentHash = JSON.stringify(payload);
+      lastSavedHash = currentHash;
+
+      if (syncChannel && !isApplyingRemoteChange) {
+        try {
+          syncChannel.postMessage({ type: 'STATE_UPDATED', payload });
+        } catch (_) {}
+      }
+
+      // If connected to Firebase Realtime Database, push
+      if (cloudStatus === 'connected' && cloudConfig && !isApplyingRemoteChange) {
+        pushToCloud(false);
+      }
+    }
+
+    function handleResetDemo() {
+      if (confirm('Tem certeza de que deseja restaurar os dados de demonstração? Todas as alterações serão substituídas pelos exemplos iniciais.')) {
+        const curr = state.currentUser;
+        state = getSeedData();
+        // keep current user logged in if possible
+        if (curr) {
+          const match = state.users.find(u => u.email === curr.email);
+          state.currentUser = match || state.users[0];
+        }
+        saveState();
+        renderAll();
+        alert('Dados restaurados com sucesso!');
+      }
+    }
+
+    /* Helper: compute effective status (auto-detect "Em atraso") */
+    function getEffectiveStatus(activity) {
+      if (activity.status === 'Finalizado') return 'Finalizado';
+      const today = hojeISO();
+      if (activity.dataFinal && activity.dataFinal < today) {
+        return 'Em atraso';
+      }
+      return activity.status || 'Iniciado';
+    }
+
+    function getStatusBadge(status) {
+      switch (status) {
+        case 'Finalizado':
+          return '<span class="badge-status badge-done">✓ Finalizado</span>';
+        case 'Em andamento':
+          return '<span class="badge-status badge-progress">● Em andamento</span>';
+        case 'Em atraso':
+          return '<span class="badge-status badge-late">⚠ Em atraso</span>';
+        case 'Iniciado':
+        default:
+          return '<span class="badge-status badge-start">○ Iniciado</span>';
+      }
+    }
+
+    /* ==========================================
+       2. AUTHENTICATION & SESSIONS
+       ========================================== */
+    function fillLogin(email, pass) {
+      document.getElementById('loginEmail').value = email;
+      document.getElementById('loginPass').value = pass;
+      document.getElementById('loginError').style.display = 'none';
+    }
+
+    async function handleLogin() {
+      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+      const pass = document.getElementById('loginPass').value;
+      const passH = hashPass(pass);
+
+      // If cloud is connected, attempt quick pull so newly added users are available
+      if (cloudConfig && cloudStatus === 'connected') {
+        try {
+          await pullFromCloud(false);
+        } catch (_) {}
+      }
+
+      const user = state.users.find(u => u.email.toLowerCase() === email && u.passHash === passH);
+
+      if (user) {
+        state.currentUser = { ...user };
+        delete state.currentUser.passHash;
+        saveState();
+        document.getElementById('loginError').style.display = 'none';
+        setupAppForUser();
+      } else {
+        document.getElementById('loginError').style.display = 'block';
+      }
+    }
+
+    function logout() {
+      state.currentUser = null;
+      saveState();
+      document.getElementById('loginView').style.display = 'flex';
+      document.getElementById('appView').style.display = 'none';
+      document.getElementById('loginEmail').value = '';
+      document.getElementById('loginPass').value = '';
+      document.getElementById('loginError').style.display = 'none';
+    }
+
+    function isDirector() {
+      return state.currentUser && state.currentUser.role === 'director';
+    }
+
+    /* ==========================================
+       3. NAVIGATION & VIEW SWITCHER
+       ========================================== */
+    let currentViewId = 'dashboard';
+
+    function showView(viewId) {
+      currentViewId = viewId;
+      document.querySelectorAll('.view-pane').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+
+      const targetPane = document.getElementById('view-' + viewId);
+      if (targetPane) targetPane.classList.add('active');
+
+      const navBtn = document.getElementById('nav-btn-' + viewId);
+      if (navBtn) navBtn.classList.add('active');
+
+      // Refresh view contents
+      switch (viewId) {
+        case 'dashboard':
+          renderDashboard();
+          break;
+        case 'plans':
+          renderPlans();
+          break;
+        case 'activities':
+          renderActivities();
+          break;
+        case 'collaborators':
+          renderCollaborators();
+          break;
+        case 'reports':
+          renderReports();
+          break;
+        case 'settings':
+          renderSettings();
+          break;
+      }
+    }
+
+    function setupAppForUser() {
+      if (!state.currentUser) {
+        document.getElementById('loginView').style.display = 'flex';
+        document.getElementById('appView').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('appView').style.display = 'flex';
+
+      document.getElementById('headerUserName').textContent = state.currentUser.nome;
+      const roleBadge = document.getElementById('headerUserRole');
+      if (isDirector()) {
+        roleBadge.textContent = 'Diretor(a)';
+        roleBadge.className = 'user-role-badge role-director';
+      } else {
+        roleBadge.textContent = 'Colaborador(a)';
+        roleBadge.className = 'user-role-badge role-collab';
+      }
+
+      // Build Navigation tabs based on role
+      const nav = document.getElementById('mainNav');
+      let navHtml = `
+        <button id="nav-btn-dashboard" class="nav-btn" onclick="showView('dashboard')">📊 Painel</button>
+      `;
+
+      if (isDirector()) {
+        navHtml += `
+          <button id="nav-btn-plans" class="nav-btn" onclick="showView('plans')">📋 Planos de Trabalho</button>
+          <button id="nav-btn-activities" class="nav-btn" onclick="showView('activities')">✅ Atividades</button>
+          <button id="nav-btn-collaborators" class="nav-btn" onclick="showView('collaborators')">👥 Colaboradores</button>
+          <button id="nav-btn-reports" class="nav-btn" onclick="showView('reports')">📑 Relatório</button>
+          <button id="nav-btn-settings" class="nav-btn" onclick="showView('settings')">⚙️ Configurações</button>
+        `;
+      } else {
+        navHtml += `
+          <button id="nav-btn-activities" class="nav-btn" onclick="showView('activities')">✅ Minhas Atividades</button>
+          <button id="nav-btn-reports" class="nav-btn" onclick="showView('reports')">📑 Meu Relatório</button>
+        `;
+      }
+      nav.innerHTML = navHtml;
+
+      // Adjust view titles and button access for collaborators
+      if (!isDirector()) {
+        document.getElementById('activitiesTitle').textContent = 'Minhas Atividades Atribuídas';
+        document.getElementById('activityActions').style.display = 'none';
+        document.getElementById('filterCollabWrapper').style.display = 'none';
+        document.getElementById('repFilterCollabWrapper').style.display = 'none';
+      } else {
+        document.getElementById('activitiesTitle').textContent = 'Quadro Geral de Atividades';
+        document.getElementById('activityActions').style.display = 'block';
+        document.getElementById('filterCollabWrapper').style.display = 'block';
+        document.getElementById('repFilterCollabWrapper').style.display = 'block';
+      }
+
+      showView('dashboard');
+    }
+
+    function renderAll() {
+      if (!state.currentUser) return;
+      populateFilterOptions();
+      showView(currentViewId);
+    }
+
+    /* ==========================================
+       4. DASHBOARD & TIMELINE
+       ========================================== */
+    function getFilteredActivitiesForUser() {
+      if (isDirector()) {
+        return state.activities;
+      }
+      return state.activities.filter(a => a.responsavelId === state.currentUser.id);
+    }
+
+    function renderDashboard() {
+      const activities = getFilteredActivitiesForUser();
+
+      let countDone = 0;
+      let countProgress = 0;
+      let countLate = 0;
+
+      activities.forEach(a => {
+        const eff = getEffectiveStatus(a);
+        if (eff === 'Finalizado') countDone++;
+        else if (eff === 'Em atraso') countLate++;
+        else if (eff === 'Em andamento') countProgress++;
+      });
+
+      document.getElementById('kpi-total').textContent = activities.length;
+      document.getElementById('kpi-done').textContent = countDone;
+      document.getElementById('kpi-progress').textContent = countProgress;
+      document.getElementById('kpi-late').textContent = countLate;
+
+      // Render grouped timeline
+      const today = hojeISO();
+      const in7 = addDaysISO(today, 7);
+      const in30 = addDaysISO(today, 30);
+
+      const groups = {
+        late: { label: '🚨 Em Atraso', color: 'border-late', items: [] },
+        next7: { label: '⚡ Próximos 7 Dias', color: 'border-progress', items: [] },
+        next30: { label: '📅 Próximos 30 Dias', color: 'border-progress', items: [] },
+        future: { label: '⏳ Futuras (+30 Dias)', color: 'border-start', items: [] },
+        done: { label: '✅ Concluídas Recentemente', color: 'border-done', items: [] }
+      };
+
+      activities.forEach(a => {
+        const eff = getEffectiveStatus(a);
+        if (eff === 'Finalizado') {
+          groups.done.items.push(a);
+        } else if (eff === 'Em atraso') {
+          groups.late.items.push(a);
+        } else if (a.dataFinal && a.dataFinal <= in7) {
+          groups.next7.items.push(a);
+        } else if (a.dataFinal && a.dataFinal <= in30) {
+          groups.next30.items.push(a);
+        } else {
+          groups.future.items.push(a);
+        }
+      });
+
+      // Sort items by dataFinal
+      for (const k in groups) {
+        groups[k].items.sort((x, y) => (x.dataFinal || '').localeCompare(y.dataFinal || ''));
+      }
+
+      const container = document.getElementById('timelineContainer');
+      let html = '';
+
+      const groupKeys = ['late', 'next7', 'next30', 'future', 'done'];
+
+      let hasAny = false;
+      groupKeys.forEach(key => {
+        const grp = groups[key];
+        if (grp.items.length === 0) return;
+        hasAny = true;
+
+        html += `
+          <div class="timeline-group">
+            <div class="timeline-group-header">
+              <span class="timeline-group-title">${grp.label}</span>
+              <span class="shell-badge">${grp.items.length} ${grp.items.length === 1 ? 'atividade' : 'atividades'}</span>
+            </div>
+            <div>
+        `;
+
+        grp.items.forEach(act => {
+          const plan = state.plans.find(p => p.id === act.planId);
+          const resp = state.users.find(u => u.id === act.responsavelId);
+          const eff = getEffectiveStatus(act);
+
+          html += `
+            <div class="timeline-card ${grp.color}">
+              <div style="flex: 1; min-width: 250px;">
+                <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 3px; color: var(--text);">
+                  ${esc(act.nome)}
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                  <span>📋 Plano: <strong>${esc(plan ? plan.nome : 'Sem plano')}</strong></span>
+                  <span>•</span>
+                  <span>👤 Responsável: <strong>${esc(resp ? resp.nome : 'Não atribuído')}</strong></span>
+                  <span class="tag-delivery">${esc(act.tipoEntrega)}</span>
+                </div>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div style="text-align: right; font-size: 0.82rem;">
+                  <div style="color: var(--text-muted);">Prazo final</div>
+                  <strong style="color: ${eff === 'Em atraso' ? 'var(--status-late)' : 'inherit'};">${fmtData(act.dataFinal)}</strong>
+                </div>
+                <div>${getStatusBadge(eff)}</div>
+                ${!isDirector() ? `
+                  <button class="btn-action btn-secondary-action btn-sm" onclick="openCollabStatusModal('${act.id}')">
+                    Alterar Condição
+                  </button>
+                ` : `
+                  <button class="btn-action btn-secondary-action btn-sm" onclick="openActivityModal('${act.id}')">
+                    Editar
+                  </button>
+                `}
+              </div>
+            </div>
+          `;
+        });
+
+        html += `</div></div>`;
+      });
+
+      if (!hasAny) {
+        html = `<div style="text-align: center; padding: 2rem; color: var(--text-muted);">Nenhuma atividade cadastrada ou encontrada.</div>`;
+      }
+
+      container.innerHTML = html;
+    }
+
+    /* ==========================================
+       5. PLANOS DE TRABALHO (DIRETOR)
+       ========================================== */
+    function renderPlans() {
+      const container = document.getElementById('plansListContainer');
+      if (state.plans.length === 0) {
+        container.innerHTML = `
+          <div class="card-panel" style="text-align: center; padding: 3rem;">
+            <p style="color: var(--text-muted); margin-bottom: 1rem;">Nenhum plano de trabalho cadastrado.</p>
+            <button class="btn-action btn-primary-action" onclick="openPlanModal()">Criar Primeiro Plano</button>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      state.plans.forEach(plan => {
+        const planActs = state.activities.filter(a => a.planId === plan.id);
+        const doneActs = planActs.filter(a => getEffectiveStatus(a) === 'Finalizado');
+        const lateActs = planActs.filter(a => getEffectiveStatus(a) === 'Em atraso');
+        const pct = planActs.length ? Math.round((doneActs.length / planActs.length) * 100) : 0;
+
+        html += `
+          <div class="card-panel" style="margin-bottom: 1.25rem;">
+            <div class="panel-header" style="margin-bottom: 0.75rem;">
+              <div>
+                <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0; color: var(--text);">
+                  ${esc(plan.nome)}
+                </h3>
+                <p style="font-size: 0.86rem; color: var(--text-muted); margin: 4px 0 0;">
+                  ${esc(plan.descricao || 'Sem descrição cadastrada.')}
+                </p>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn-action btn-secondary-action btn-sm" onclick="filterActivitiesByPlan('${plan.id}')">
+                  Ver Atividades (${planActs.length})
+                </button>
+                <button class="btn-action btn-secondary-action btn-sm" onclick="openPlanModal('${plan.id}')">
+                  Editar
+                </button>
+                <button class="btn-action btn-danger-action btn-sm" onclick="deletePlan('${plan.id}')">
+                  Excluir
+                </button>
+              </div>
+            </div>
+
+            <!-- Progresso e KPIs do Plano -->
+            <div style="background: var(--bg); border-radius: 8px; padding: 12px; margin-top: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.85rem;">
+                <span>Progresso das Entregas</span>
+                <span style="font-weight: 700; color: var(--accent);">${pct}% concluído</span>
+              </div>
+              <div style="background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 10px;">
+                <div style="width: ${pct}%; background: var(--accent); height: 100%; transition: width 0.3s ease;"></div>
+              </div>
+              <div style="display: flex; gap: 16px; font-size: 0.8rem; flex-wrap: wrap;">
+                <span>Total: <strong>${planActs.length}</strong></span>
+                <span style="color: var(--status-done);">Finalizadas: <strong>${doneActs.length}</strong></span>
+                <span style="color: var(--status-late);">Em Atraso: <strong>${lateActs.length}</strong></span>
+                <span>Pendentes: <strong>${planActs.length - doneActs.length}</strong></span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function filterActivitiesByPlan(planId) {
+      showView('activities');
+      const select = document.getElementById('filterActPlan');
+      if (select) {
+        select.value = planId;
+        renderActivities();
+      }
+    }
+
+    function openPlanModal(planId = null) {
+      const plan = planId ? state.plans.find(p => p.id === planId) : null;
+      const isEdit = !!plan;
+
+      const title = isEdit ? 'Editar Plano de Trabalho' : 'Novo Plano de Trabalho';
+      const content = `
+        <form id="planForm" onsubmit="event.preventDefault(); savePlan('${isEdit ? plan.id : ''}');">
+          <div class="form-group">
+            <label for="planNome">Nome do Plano *</label>
+            <input type="text" id="planNome" class="form-control" value="${esc(plan ? plan.nome : '')}" required placeholder="Ex: Modernização dos Serviços 2025">
+          </div>
+          <div class="form-group">
+            <label for="planDesc">Descrição / Objetivo Geral</label>
+            <textarea id="planDesc" class="form-control" rows="3" placeholder="Detalhes, escopo e metas do plano de trabalho">${esc(plan ? plan.descricao : '')}</textarea>
+          </div>
+        </form>
+      `;
+
+      const footer = `
+        <button class="btn-action btn-secondary-action" onclick="closeModal()">Cancelar</button>
+        <button class="btn-action btn-primary-action" onclick="document.getElementById('planForm').requestSubmit()">Salvar Plano</button>
+      `;
+
+      openModal(title, content, footer);
+    }
+
+    function savePlan(planId) {
+      const nome = document.getElementById('planNome').value.trim();
+      const descricao = document.getElementById('planDesc').value.trim();
+
+      if (!nome) {
+        alert('O nome do plano é obrigatório.');
+        return;
+      }
+
+      if (planId) {
+        const plan = state.plans.find(p => p.id === planId);
+        if (plan) {
+          plan.nome = nome;
+          plan.descricao = descricao;
+        }
+      } else {
+        const newPlan = {
+          id: uid(),
+          nome,
+          descricao
+        };
+        state.plans.push(newPlan);
+      }
+
+      saveState();
+      closeModal();
+      populateFilterOptions();
+      renderPlans();
+    }
+
+    function deletePlan(planId) {
+      const plan = state.plans.find(p => p.id === planId);
+      if (!plan) return;
+
+      const count = state.activities.filter(a => a.planId === planId).length;
+      const msg = count > 0
+        ? `Excluir o plano "${plan.nome}" também removerá as ${count} atividades vinculadas a ele. Deseja continuar?`
+        : `Deseja realmente excluir o plano "${plan.nome}"?`;
+
+      if (confirm(msg)) {
+        state.plans = state.plans.filter(p => p.id !== planId);
+        state.activities = state.activities.filter(a => a.planId !== planId);
+        saveState();
+        populateFilterOptions();
+        renderPlans();
+      }
+    }
+
+    /* ==========================================
+       6. FILE UPLOAD & REVISION MODAL (.TXT, .CSV, .PDF)
+       ========================================== */
+    function triggerPlanUpload() {
+      const input = document.getElementById('planFileInput');
+      input.value = '';
+      input.click();
+    }
+
+    function handlePlanFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const fileName = file.name;
+      const ext = fileName.split('.').pop().toLowerCase();
+
+      const reader = new FileReader();
+
+      if (ext === 'txt' || ext === 'csv') {
+        reader.onload = function(evt) {
+          parseTextOrCsvPlan(evt.target.result, fileName);
+        };
+        reader.readAsText(file, 'UTF-8');
+      } else if (ext === 'pdf') {
+        // PDF parser extracting text streams / ASCII strings natively
+        reader.onload = function(evt) {
+          parsePdfNative(evt.target.result, fileName);
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        alert('Formato de arquivo não suportado. Por favor utilize arquivos .txt, .csv ou .pdf.');
+      }
+    }
+
+    function parseTextOrCsvPlan(content, fileName) {
+      const defaultPlanName = fileName.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+      const lines = content.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+
+      const draftActivities = [];
+      const today = hojeISO();
+
+      lines.forEach((line, idx) => {
+        // Ignore headers
+        if (idx === 0 && (line.toLowerCase().includes('atividade') || line.toLowerCase().includes('nome;') || line.toLowerCase().includes('tarefa'))) {
+          return;
+        }
+
+        let parts = line.includes(';') ? line.split(';') : line.includes(',') ? line.split(',') : [line];
+        parts = parts.map(p => p.trim().replace(/^["']|["']$/g, ''));
+
+        const title = parts[0] || ('Atividade ' + (draftActivities.length + 1));
+        let tipo = 'Documento';
+        let dInicio = today;
+        let dFinal = addDaysISO(today, 15);
+
+        // Try to match delivery types
+        state.deliveryTypes.forEach(t => {
+          if (parts.some(p => p.toLowerCase().includes(t.toLowerCase()))) {
+            tipo = t;
+          }
+        });
+
+        // Try to match dates in dd/mm/yyyy or yyyy-mm-dd
+        parts.forEach(p => {
+          const matchBr = p.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+          if (matchBr) {
+            const iso = `${matchBr[3]}-${matchBr[2]}-${matchBr[1]}`;
+            if (!dInicio || dInicio === today) dInicio = iso;
+            else dFinal = iso;
+          }
+          const matchIso = p.match(/(\d{4})-(\d{2})-(\d{2})/);
+          if (matchIso) {
+            if (!dInicio || dInicio === today) dInicio = matchIso[0];
+            else dFinal = matchIso[0];
+          }
+        });
+
+        draftActivities.push({
+          tempId: uid(),
+          nome: title,
+          tipoEntrega: tipo,
+          dataInicio: dInicio,
+          dataFinal: dFinal,
+          responsavelId: state.users[0]?.id || ''
+        });
+      });
+
+      if (draftActivities.length === 0) {
+        draftActivities.push({
+          tempId: uid(),
+          nome: 'Atividade 1',
+          tipoEntrega: 'Documento',
+          dataInicio: today,
+          dataFinal: addDaysISO(today, 14),
+          responsavelId: state.users[0]?.id || ''
+        });
+      }
+
+      openPlanReviewModal(defaultPlanName, draftActivities);
+    }
+
+    function parsePdfNative(buffer, fileName) {
+      const defaultPlanName = fileName.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+      const decoder = new TextDecoder('latin1');
+      const text = decoder.decode(buffer);
+
+      // Extract text inside parentheses in PDF text operators like (text) Tj or [(text)] TJ
+      const matches = [];
+      const regex = /\(([^)]+)\)\s*(?:Tj|'|")/g;
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        const cleaned = match[1].replace(/\\([()\\])/g, '$1').trim();
+        if (cleaned.length > 3 && !cleaned.startsWith('/') && !cleaned.includes('Font')) {
+          matches.push(cleaned);
+        }
+      }
+
+      const today = hojeISO();
+      let draftActivities = [];
+
+      // Find action verbs or phrases
+      const actionVerbs = ['elaborar', 'revisar', 'definir', 'analisar', 'desenvolver', 'implementar', 'reunir', 'homologar', 'apresentar', 'produzir', 'entregar', 'auditar', 'treinar', 'executar', 'planejar'];
+
+      matches.forEach(item => {
+        const lower = item.toLowerCase();
+        const hasVerb = actionVerbs.some(v => lower.includes(v));
+        if (hasVerb || item.length > 12) {
+          if (draftActivities.length < 15) {
+            draftActivities.push({
+              tempId: uid(),
+              nome: item.substring(0, 90),
+              tipoEntrega: 'Documento',
+              dataInicio: today,
+              dataFinal: addDaysISO(today, 15),
+              responsavelId: state.users[0]?.id || ''
+            });
+          }
+        }
+      });
+
+      if (draftActivities.length === 0) {
+        draftActivities.push(
+          { tempId: uid(), nome: 'Planejamento e Alinhamento do Escopo', tipoEntrega: 'Reunião', dataInicio: today, dataFinal: addDaysISO(today, 7), responsavelId: state.users[0]?.id || '' },
+          { tempId: uid(), nome: 'Execução do Plano de Trabalho', tipoEntrega: 'Produto/Material', dataInicio: today, dataFinal: addDaysISO(today, 30), responsavelId: state.users[0]?.id || '' }
+        );
+      }
+
+      openPlanReviewModal(defaultPlanName, draftActivities);
+    }
+
+    let reviewDraftState = {
+      planNome: '',
+      planDesc: '',
+      activities: []
+    };
+
+    function openPlanReviewModal(planName, activities) {
+      reviewDraftState = {
+        planNome: planName,
+        planDesc: 'Plano importado via arquivo com rascunho de atividades.',
+        activities: activities
+      };
+
+      renderReviewModalContent();
+    }
+
+    function renderReviewModalContent() {
+      const optionsResp = state.users.map(u => `<option value="${u.id}">${esc(u.nome)} (${esc(u.cargo)})</option>`).join('');
+      const optionsTipo = state.deliveryTypes.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+
+      let rows = '';
+      reviewDraftState.activities.forEach((act, idx) => {
+        rows += `
+          <tr id="review-row-${act.tempId}">
+            <td style="min-width: 180px;">
+              <input type="text" class="form-control" value="${esc(act.nome)}" onchange="updateDraftActivity('${act.tempId}', 'nome', this.value)" placeholder="Nome da atividade">
+            </td>
+            <td>
+              <select class="form-control" onchange="updateDraftActivity('${act.tempId}', 'tipoEntrega', this.value)">
+                ${state.deliveryTypes.map(t => `<option value="${esc(t)}" ${t === act.tipoEntrega ? 'selected' : ''}>${esc(t)}</option>`).join('')}
+              </select>
+            </td>
+            <td>
+              <select class="form-control" onchange="updateDraftActivity('${act.tempId}', 'responsavelId', this.value)">
+                ${state.users.map(u => `<option value="${u.id}" ${u.id === act.responsavelId ? 'selected' : ''}>${esc(u.nome)}</option>`).join('')}
+              </select>
+            </td>
+            <td>
+              <input type="date" class="form-control" value="${esc(act.dataInicio)}" onchange="updateDraftActivity('${act.tempId}', 'dataInicio', this.value)">
+            </td>
+            <td>
+              <input type="date" class="form-control" value="${esc(act.dataFinal)}" onchange="updateDraftActivity('${act.tempId}', 'dataFinal', this.value)">
+            </td>
+            <td style="text-align: right;">
+              <button class="btn-action btn-danger-action btn-sm" onclick="removeDraftActivity('${act.tempId}')">Remover</button>
+            </td>
+          </tr>
+        `;
+      });
+
+      const content = `
+        <div>
+          <div class="form-group">
+            <label>Nome do Plano de Trabalho *</label>
+            <input type="text" id="revPlanNome" class="form-control" value="${esc(reviewDraftState.planNome)}" onchange="reviewDraftState.planNome = this.value">
+          </div>
+          <div class="form-group">
+            <label>Descrição do Plano</label>
+            <input type="text" id="revPlanDesc" class="form-control" value="${esc(reviewDraftState.planDesc)}" onchange="reviewDraftState.planDesc = this.value">
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin: 1.25rem 0 0.5rem;">
+            <strong style="font-size: 0.95rem;">Revisão das Atividades Extraídas (${reviewDraftState.activities.length})</strong>
+            <button class="btn-action btn-secondary-action btn-sm" onclick="addDraftActivity()">+ Adicionar Atividade</button>
+          </div>
+
+          <div class="table-container" style="max-height: 280px; overflow-y: auto;">
+            <table class="custom-table" style="font-size: 0.85rem;">
+              <thead>
+                <tr>
+                  <th>Atividade</th>
+                  <th>Tipo</th>
+                  <th>Responsável</th>
+                  <th>Início</th>
+                  <th>Término</th>
+                  <th style="text-align: right;">Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+
+      const footer = `
+        <button class="btn-action btn-secondary-action" onclick="closeModal()">Cancelar</button>
+        <button class="btn-action btn-primary-action" onclick="confirmImportPlan()">Confirmar e Salvar Plano</button>
+      `;
+
+      // Expand modal width for the review table
+      document.getElementById('modalBox').style.maxWidth = '900px';
+      openModal('Revisão e Confirmação de Plano de Trabalho', content, footer);
+    }
+
+    function updateDraftActivity(tempId, field, value) {
+      const item = reviewDraftState.activities.find(a => a.tempId === tempId);
+      if (item) item[field] = value;
+    }
+
+    function addDraftActivity() {
+      const today = hojeISO();
+      reviewDraftState.activities.push({
+        tempId: uid(),
+        nome: 'Nova Atividade',
+        tipoEntrega: 'Documento',
+        dataInicio: today,
+        dataFinal: addDaysISO(today, 15),
+        responsavelId: state.users[0]?.id || ''
+      });
+      renderReviewModalContent();
+    }
+
+    function removeDraftActivity(tempId) {
+      reviewDraftState.activities = reviewDraftState.activities.filter(a => a.tempId !== tempId);
+      renderReviewModalContent();
+    }
+
+    function confirmImportPlan() {
+      const planNome = (document.getElementById('revPlanNome')?.value || reviewDraftState.planNome).trim();
+      const planDesc = (document.getElementById('revPlanDesc')?.value || reviewDraftState.planDesc).trim();
+
+      if (!planNome) {
+        alert('Por favor informe o nome do plano de trabalho.');
+        return;
+      }
+
+      if (reviewDraftState.activities.length === 0) {
+        alert('O plano precisa ter ao menos uma atividade.');
+        return;
+      }
+
+      const newPlanId = uid();
+      state.plans.push({
+        id: newPlanId,
+        nome: planNome,
+        descricao: planDesc
+      });
+
+      reviewDraftState.activities.forEach(act => {
+        state.activities.push({
+          id: uid(),
+          planId: newPlanId,
+          nome: act.nome || 'Atividade sem nome',
+          tipoEntrega: act.tipoEntrega || 'Documento',
+          dataInicio: act.dataInicio || hojeISO(),
+          dataFinal: act.dataFinal || hojeISO(),
+          responsavelId: act.responsavelId || state.users[0]?.id || '',
+          status: 'Iniciado'
+        });
+      });
+
+      saveState();
+      document.getElementById('modalBox').style.maxWidth = '620px';
+      closeModal();
+      populateFilterOptions();
+      renderAll();
+      showView('plans');
+      alert(`Plano "${planNome}" e ${reviewDraftState.activities.length} atividades cadastrados com sucesso!`);
+    }
+
+    /* ==========================================
+       7. ATIVIDADES CRUD & FILTERS
+       ========================================== */
+    function populateFilterOptions() {
+      const pSelects = ['filterActPlan', 'repFilterPlan'];
+      pSelects.forEach(selId => {
+        const sel = document.getElementById(selId);
+        if (!sel) return;
+        const currVal = sel.value;
+        let opt = `<option value="">Todos os Planos</option>`;
+        state.plans.forEach(p => {
+          opt += `<option value="${p.id}" ${p.id === currVal ? 'selected' : ''}>${esc(p.nome)}</option>`;
+        });
+        sel.innerHTML = opt;
+      });
+
+      const uSelects = ['filterActCollab', 'repFilterCollab'];
+      uSelects.forEach(selId => {
+        const sel = document.getElementById(selId);
+        if (!sel) return;
+        const currVal = sel.value;
+        let opt = `<option value="">Todos os Responsáveis</option>`;
+        state.users.forEach(u => {
+          opt += `<option value="${u.id}" ${u.id === currVal ? 'selected' : ''}>${esc(u.nome)}</option>`;
+        });
+        sel.innerHTML = opt;
+      });
+    }
+
+    function clearActivityFilters() {
+      document.getElementById('filterActSearch').value = '';
+      if (document.getElementById('filterActCollab')) document.getElementById('filterActCollab').value = '';
+      document.getElementById('filterActPlan').value = '';
+      document.getElementById('filterActStatus').value = '';
+      renderActivities();
+    }
+
+    function renderActivities() {
+      const tbody = document.getElementById('activitiesTbody');
+      const search = (document.getElementById('filterActSearch')?.value || '').toLowerCase();
+      const planFilter = document.getElementById('filterActPlan')?.value || '';
+      const collabFilter = document.getElementById('filterActCollab')?.value || '';
+      const statusFilter = document.getElementById('filterActStatus')?.value || '';
+
+      let list = state.activities;
+
+      // Collab only sees their own activities
+      if (!isDirector()) {
+        list = list.filter(a => a.responsavelId === state.currentUser.id);
+      } else if (collabFilter) {
+        list = list.filter(a => a.responsavelId === collabFilter);
+      }
+
+      if (planFilter) {
+        list = list.filter(a => a.planId === planFilter);
+      }
+
+      if (search) {
+        list = list.filter(a => a.nome.toLowerCase().includes(search));
+      }
+
+      if (statusFilter) {
+        list = list.filter(a => getEffectiveStatus(a) === statusFilter);
+      }
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">Nenhuma atividade encontrada com os filtros aplicados.</td></tr>`;
+        return;
+      }
+
+      // Sort by status (Late first, then in progress, started, done)
+      list.sort((a, b) => (a.dataFinal || '').localeCompare(b.dataFinal || ''));
+
+      let html = '';
+      list.forEach(act => {
+        const plan = state.plans.find(p => p.id === act.planId);
+        const resp = state.users.find(u => u.id === act.responsavelId);
+        const effStatus = getEffectiveStatus(act);
+
+        html += `
+          <tr>
+            <td style="font-weight: 600; color: var(--text);">
+              ${esc(act.nome)}
+            </td>
+            <td>${esc(plan ? plan.nome : '-')}</td>
+            <td><span class="tag-delivery">${esc(act.tipoEntrega)}</span></td>
+            <td>${esc(resp ? resp.nome : 'Não atribuído')}</td>
+            <td style="font-size: 0.85rem;">${fmtData(act.dataInicio)}</td>
+            <td style="font-size: 0.85rem; font-weight: ${effStatus === 'Em atraso' ? '700' : 'normal'}; color: ${effStatus === 'Em atraso' ? 'var(--status-late)' : 'inherit'};">
+              ${fmtData(act.dataFinal)}
+            </td>
+            <td>${getStatusBadge(effStatus)}</td>
+            <td style="text-align: right; white-space: nowrap;">
+              ${isDirector() ? `
+                <button class="btn-action btn-secondary-action btn-sm" onclick="openActivityModal('${act.id}')">Editar</button>
+                <button class="btn-action btn-danger-action btn-sm" onclick="deleteActivity('${act.id}')">Excluir</button>
+              ` : `
+                <button class="btn-action btn-primary-action btn-sm" onclick="openCollabStatusModal('${act.id}')">Atualizar Status</button>
+              `}
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    function openActivityModal(actId = null) {
+      if (!isDirector()) return;
+
+      const act = actId ? state.activities.find(a => a.id === actId) : null;
+      const isEdit = !!act;
+      const title = isEdit ? 'Editar Atividade' : 'Nova Atividade';
+
+      const planOptions = state.plans.map(p => `
+        <option value="${p.id}" ${act && act.planId === p.id ? 'selected' : ''}>${esc(p.nome)}</option>
+      `).join('');
+
+      const userOptions = state.users.map(u => `
+        <option value="${u.id}" ${act && act.responsavelId === u.id ? 'selected' : ''}>${esc(u.nome)} (${esc(u.cargo)})</option>
+      `).join('');
+
+      const typeOptions = state.deliveryTypes.map(t => `
+        <option value="${esc(t)}" ${act && act.tipoEntrega === t ? 'selected' : ''}>${esc(t)}</option>
+      `).join('');
+
+      const today = hojeISO();
+      const statusOptions = ['Iniciado', 'Em andamento', 'Finalizado'].map(s => `
+        <option value="${s}" ${act && act.status === s ? 'selected' : ''}>${s}</option>
+      `).join('');
+
+      const content = `
+        <form id="activityForm" onsubmit="event.preventDefault(); saveActivity('${isEdit ? act.id : ''}');">
+          <div class="form-group">
+            <label for="actNome">Nome da Atividade *</label>
+            <input type="text" id="actNome" class="form-control" value="${esc(act ? act.nome : '')}" required placeholder="Ex: Elaborar relatório de custos">
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="actPlan">Plano de Trabalho *</label>
+              <select id="actPlan" class="form-control" required>
+                ${planOptions.length ? planOptions : '<option value="">Crie um plano primeiro</option>'}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="actTipo">Tipo de Entrega *</label>
+              <select id="actTipo" class="form-control" required>
+                ${typeOptions}
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="actResp">Responsável *</label>
+            <select id="actResp" class="form-control" required>
+              ${userOptions}
+            </select>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="actDataIni">Data de Início *</label>
+              <input type="date" id="actDataIni" class="form-control" value="${esc(act ? act.dataInicio : today)}" required>
+            </div>
+            <div class="form-group">
+              <label for="actDataFim">Data Final (Prazo) *</label>
+              <input type="date" id="actDataFim" class="form-control" value="${esc(act ? act.dataFinal : addDaysISO(today, 15))}" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="actStatus">Condição / Status Declarado</label>
+            <select id="actStatus" class="form-control">
+              ${statusOptions}
+            </select>
+            <small style="color: var(--text-muted); font-size: 0.78rem;">
+              * Caso a data final tenha expirado e o status não seja "Finalizado", o sistema exibirá automaticamente "Em atraso".
+            </small>
+          </div>
+        </form>
+      `;
+
+      const footer = `
+        <button class="btn-action btn-secondary-action" onclick="closeModal()">Cancelar</button>
+        <button class="btn-action btn-primary-action" onclick="document.getElementById('activityForm').requestSubmit()">Salvar Atividade</button>
+      `;
+
+      openModal(title, content, footer);
+    }
+
+    function saveActivity(actId) {
+      const nome = document.getElementById('actNome').value.trim();
+      const planId = document.getElementById('actPlan').value;
+      const tipoEntrega = document.getElementById('actTipo').value;
+      const responsavelId = document.getElementById('actResp').value;
+      const dataInicio = document.getElementById('actDataIni').value;
+      const dataFinal = document.getElementById('actDataFim').value;
+      const status = document.getElementById('actStatus').value;
+
+      if (!nome || !planId || !responsavelId || !dataInicio || !dataFinal) {
+        alert('Por favor, preencha todos os campos obrigatórios.');
+        return;
+      }
+
+      if (dataFinal < dataInicio) {
+        alert('A data final não pode ser anterior à data de início.');
+        return;
+      }
+
+      if (actId) {
+        const act = state.activities.find(a => a.id === actId);
+        if (act) {
+          act.nome = nome;
+          act.planId = planId;
+          act.tipoEntrega = tipoEntrega;
+          act.responsavelId = responsavelId;
+          act.dataInicio = dataInicio;
+          act.dataFinal = dataFinal;
+          act.status = status;
+        }
+      } else {
+        const newAct = {
+          id: uid(),
+          nome,
+          planId,
+          tipoEntrega,
+          responsavelId,
+          dataInicio,
+          dataFinal,
+          status
+        };
+        state.activities.push(newAct);
+      }
+
+      saveState();
+      closeModal();
+      renderAll();
+    }
+
+    function deleteActivity(actId) {
+      const act = state.activities.find(a => a.id === actId);
+      if (!act) return;
+
+      if (confirm(`Deseja realmente excluir a atividade "${act.nome}"?`)) {
+        state.activities = state.activities.filter(a => a.id !== actId);
+        saveState();
+        renderAll();
+      }
+    }
+
+    /* Modal for Collaborator to update only their condition/status */
+    function openCollabStatusModal(actId) {
+      const act = state.activities.find(a => a.id === actId);
+      if (!act) return;
+
+      const title = 'Atualizar Condição da Atividade';
+      const content = `
+        <div>
+          <p style="margin-top:0;"><strong>Atividade:</strong> ${esc(act.nome)}</p>
+          <p style="color:var(--text-muted); font-size:0.85rem;">Prazo final: ${fmtData(act.dataFinal)}</p>
+
+          <div class="form-group">
+            <label for="collabStatusSelect">Nova Condição:</label>
+            <select id="collabStatusSelect" class="form-control">
+              <option value="Iniciado" ${act.status === 'Iniciado' ? 'selected' : ''}>Iniciado</option>
+              <option value="Em andamento" ${act.status === 'Em andamento' ? 'selected' : ''}>Em andamento</option>
+              <option value="Finalizado" ${act.status === 'Finalizado' ? 'selected' : ''}>Finalizado</option>
+            </select>
+          </div>
+        </div>
+      `;
+
+      const footer = `
+        <button class="btn-action btn-secondary-action" onclick="closeModal()">Cancelar</button>
+        <button class="btn-action btn-primary-action" onclick="saveCollabStatus('${act.id}')">Atualizar Status</button>
+      `;
+
+      openModal(title, content, footer);
+    }
+
+    function saveCollabStatus(actId) {
+      const act = state.activities.find(a => a.id === actId);
+      if (!act) return;
+
+      const newStatus = document.getElementById('collabStatusSelect').value;
+      act.status = newStatus;
+
+      saveState();
+      closeModal();
+      renderAll();
+    }
+
+    /* ==========================================
+       8. COLABORADORES CRUD (DIRETOR)
+       ========================================== */
+    function renderCollaborators() {
+      const tbody = document.getElementById('collabTbody');
+      if (!tbody) return;
+
+      let html = '';
+      state.users.forEach(u => {
+        const count = state.activities.filter(a => a.responsavelId === u.id).length;
+        const isDir = u.role === 'director';
+
+        html += `
+          <tr>
+            <td style="font-weight: 600; color: var(--text);">
+              ${esc(u.nome)}
+            </td>
+            <td><code>${esc(u.email)}</code></td>
+            <td>${esc(u.cargo)}</td>
+            <td>
+              <span class="user-role-badge ${isDir ? 'role-director' : 'role-collab'}">
+                ${isDir ? 'Diretor' : 'Colaborador'}
+              </span>
+            </td>
+            <td>
+              <span class="shell-badge">${count} ${count === 1 ? 'atividade' : 'atividades'}</span>
+            </td>
+            <td style="text-align: right; white-space: nowrap;">
+              <button class="btn-action btn-secondary-action btn-sm" onclick="openCollabModal('${u.id}')">Editar</button>
+              ${u.id !== state.currentUser.id ? `
+                <button class="btn-action btn-danger-action btn-sm" onclick="deleteCollaborator('${u.id}')">Excluir</button>
+              ` : `
+                <span style="font-size:0.75rem; color:var(--text-muted); margin-left:6px;">(Usuário Atual)</span>
+              `}
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    function openCollabModal(userId = null) {
+      if (!isDirector()) return;
+
+      const user = userId ? state.users.find(u => u.id === userId) : null;
+      const isEdit = !!user;
+      const title = isEdit ? 'Editar Colaborador' : 'Novo Colaborador';
+
+      const content = `
+        <form id="collabForm" onsubmit="event.preventDefault(); saveCollaborator('${isEdit ? user.id : ''}');">
+          <div class="form-group">
+            <label for="collabNome">Nome Completo *</label>
+            <input type="text" id="collabNome" class="form-control" value="${esc(user ? user.nome : '')}" required placeholder="Ex: Carlos Eduardo Silva">
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="collabEmail">E-mail / Login de Acesso *</label>
+              <input type="email" id="collabEmail" class="form-control" value="${esc(user ? user.email : '')}" required placeholder="colaborador@demo">
+            </div>
+            <div class="form-group">
+              <label for="collabPass">Senha de Acesso ${isEdit ? '(Deixe em branco para manter)' : '*'}</label>
+              <input type="password" id="collabPass" class="form-control" ${isEdit ? '' : 'required'} placeholder="Senha alfanumérica">
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="collabCargo">Cargo / Função *</label>
+              <input type="text" id="collabCargo" class="form-control" value="${esc(user ? user.cargo : '')}" required placeholder="Ex: Analista de Planejamento">
+            </div>
+            <div class="form-group">
+              <label for="collabRole">Perfil de Permissão *</label>
+              <select id="collabRole" class="form-control" required>
+                <option value="collab" ${user && user.role === 'collab' ? 'selected' : ''}>Colaborador (Vê apenas suas atividades)</option>
+                <option value="director" ${user && user.role === 'director' ? 'selected' : ''}>Diretor (Acesso irrestrito a tudo)</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      `;
+
+      const footer = `
+        <button class="btn-action btn-secondary-action" onclick="closeModal()">Cancelar</button>
+        <button class="btn-action btn-primary-action" onclick="document.getElementById('collabForm').requestSubmit()">Salvar Cadastro</button>
+      `;
+
+      openModal(title, content, footer);
+    }
+
+    function saveCollaborator(userId) {
+      const nome = document.getElementById('collabNome').value.trim();
+      const email = document.getElementById('collabEmail').value.trim().toLowerCase();
+      const pass = document.getElementById('collabPass').value;
+      const cargo = document.getElementById('collabCargo').value.trim();
+      const role = document.getElementById('collabRole').value;
+
+      if (!nome || !email || !cargo) {
+        alert('Por favor, preencha todos os campos obrigatórios.');
+        return;
+      }
+
+      // Check unique email
+      const existing = state.users.find(u => u.email.toLowerCase() === email && u.id !== userId);
+      if (existing) {
+        alert('Já existe outro colaborador cadastrado com este e-mail / login.');
+        return;
+      }
+
+      if (userId) {
+        const u = state.users.find(x => x.id === userId);
+        if (u) {
+          u.nome = nome;
+          u.email = email;
+          u.cargo = cargo;
+          u.role = role;
+          if (pass.trim()) {
+            u.passHash = hashPass(pass.trim());
+          }
+        }
+      } else {
+        if (!pass.trim()) {
+          alert('A senha é obrigatória para novos colaboradores.');
+          return;
+        }
+        state.users.push({
+          id: uid(),
+          nome,
+          email,
+          passHash: hashPass(pass.trim()),
+          cargo,
+          role
+        });
+      }
+
+      saveState();
+      closeModal();
+      populateFilterOptions();
+      renderCollaborators();
+    }
+
+    function deleteCollaborator(userId) {
+      const user = state.users.find(u => u.id === userId);
+      if (!user) return;
+
+      const actCount = state.activities.filter(a => a.responsavelId === userId).length;
+      if (actCount > 0) {
+        alert(`Não é possível excluir o colaborador "${user.nome}" pois ele possui ${actCount} atividade(s) vinculada(s). Reatribua as atividades antes de excluir.`);
+        return;
+      }
+
+      if (confirm(`Deseja realmente excluir o colaborador "${user.nome}"?`)) {
+        state.users = state.users.filter(u => u.id !== userId);
+        saveState();
+        populateFilterOptions();
+        renderCollaborators();
+      }
+    }
+
+    /* ==========================================
+       9. RELATÓRIO, EXPORT CSV & PRINT
+       ========================================== */
+    function getReportFilteredList() {
+      let list = state.activities;
+
+      if (!isDirector()) {
+        list = list.filter(a => a.responsavelId === state.currentUser.id);
+      } else {
+        const collabFilter = document.getElementById('repFilterCollab')?.value;
+        if (collabFilter) list = list.filter(a => a.responsavelId === collabFilter);
+      }
+
+      const planFilter = document.getElementById('repFilterPlan')?.value;
+      if (planFilter) list = list.filter(a => a.planId === planFilter);
+
+      return list;
+    }
+
+    function renderReports() {
+      const tbody = document.getElementById('reportTbody');
+      const list = getReportFilteredList();
+
+      const printDate = document.getElementById('printDateGenerated');
+      if (printDate) {
+        printDate.textContent = `Emitido em: ${fmtData(hojeISO())} por ${state.currentUser ? state.currentUser.nome : ''}`;
+      }
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">Nenhuma atividade corresponde aos filtros selecionados.</td></tr>`;
+        return;
+      }
+
+      let html = '';
+      list.forEach(act => {
+        const plan = state.plans.find(p => p.id === act.planId);
+        const resp = state.users.find(u => u.id === act.responsavelId);
+        const effStatus = getEffectiveStatus(act);
+
+        html += `
+          <tr>
+            <td><strong>${esc(plan ? plan.nome : '-')}</strong></td>
+            <td>${esc(act.nome)}</td>
+            <td><span class="tag-delivery">${esc(act.tipoEntrega)}</span></td>
+            <td>${esc(resp ? resp.nome : 'Não atribuído')}</td>
+            <td>${fmtData(act.dataInicio)}</td>
+            <td>${fmtData(act.dataFinal)}</td>
+            <td>${getStatusBadge(effStatus)}</td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    function exportCSV() {
+      const list = getReportFilteredList();
+      if (list.length === 0) {
+        alert('Não há dados para exportar com os filtros atuais.');
+        return;
+      }
+
+      // Headers with semicolon delimiter for Excel BR compatibility
+      let csv = 'Plano de Trabalho;Atividade;Tipo de Entrega;Responsavel;Data de Inicio;Data Final;Condicao/Status\r\n';
+
+      list.forEach(act => {
+        const plan = state.plans.find(p => p.id === act.planId);
+        const resp = state.users.find(u => u.id === act.responsavelId);
+        const effStatus = getEffectiveStatus(act);
+
+        const clean = str => `"${(str || '').replace(/"/g, '""')}"`;
+
+        const row = [
+          clean(plan ? plan.nome : ''),
+          clean(act.nome),
+          clean(act.tipoEntrega),
+          clean(resp ? resp.nome : ''),
+          fmtData(act.dataInicio),
+          fmtData(act.dataFinal),
+          clean(effStatus)
+        ].join(';');
+
+        csv += row + '\r\n';
+      });
+
+      // UTF-8 BOM \uFEFF ensures proper accent rendering in Excel
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `relatorio_planos_trabalho_${hojeISO()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function printReport() {
+      window.print();
+    }
+
+    /* ==========================================
+       10. CONFIGURAÇÕES VIEW (DIRETOR)
+       ========================================== */
+    function renderSettings() {
+      const listEl = document.getElementById('deliveryTypesList');
+      if (!listEl) return;
+
+      let html = '';
+      state.deliveryTypes.forEach(type => {
+        const inUseCount = state.activities.filter(a => a.tipoEntrega === type).length;
+        html += `
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: var(--bg); border-radius: 6px; border: 1px solid var(--border);">
+            <div>
+              <strong>${esc(type)}</strong>
+              <span style="font-size: 0.75rem; color: var(--text-muted); margin-left: 8px;">(${inUseCount} em uso)</span>
+            </div>
+            ${state.deliveryTypes.length > 1 ? `
+              <button class="btn-action btn-danger-action btn-sm" onclick="removeDeliveryType('${esc(type)}')">Excluir</button>
+            ` : ''}
+          </div>
+        `;
+      });
+
+      listEl.innerHTML = html;
+
+      // Populate Cloud Settings fields
+      const inputArea = document.getElementById('firebaseConfigInput');
+      const inputUrl = document.getElementById('firebaseDbUrlInput');
+      if (cloudConfig) {
+        if (inputUrl && cloudConfig.databaseURL) {
+          inputUrl.value = cloudConfig.databaseURL;
+        }
+        if (inputArea && !inputArea.value) {
+          inputArea.value = JSON.stringify(cloudConfig, null, 2);
+        }
+      }
+      updateCloudStatusUI(cloudStatus, cloudStatusMsg);
+    }
+
+    function addDeliveryType() {
+      const input = document.getElementById('newDeliveryTypeInput');
+      const val = input.value.trim();
+      if (!val) return;
+
+      if (state.deliveryTypes.includes(val)) {
+        alert('Este tipo de entrega já existe.');
+        return;
+      }
+
+      state.deliveryTypes.push(val);
+      input.value = '';
+      saveState();
+      renderSettings();
+    }
+
+    function removeDeliveryType(type) {
+      const inUseCount = state.activities.filter(a => a.tipoEntrega === type).length;
+      if (inUseCount > 0) {
+        alert(`O tipo "${type}" está sendo usado em ${inUseCount} atividade(s). Modifique essas atividades antes de remover.`);
+        return;
+      }
+
+      if (confirm(`Deseja remover o tipo de entrega "${type}"?`)) {
+        state.deliveryTypes = state.deliveryTypes.filter(t => t !== type);
+        saveState();
+        renderSettings();
+      }
+    }
+
+    /* ==========================================
+       11. MODAL FRAMEWORK
+       ========================================== */
+    function openModal(title, bodyHtml, footerHtml = '') {
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalContent').innerHTML = bodyHtml;
+      document.getElementById('modalFooter').innerHTML = footerHtml;
+      document.getElementById('modalOverlay').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.remove('open');
+      document.getElementById('modalBox').style.maxWidth = '620px';
+    }
+
+    function handleBackdropClick(e) {
+      if (e.target === document.getElementById('modalOverlay')) {
+        closeModal();
+      }
+    }
+
+    // Keyboard support (Escape closes modal)
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    /* ==========================================
+       12. INITIALIZATION ON DOM READY
+       ========================================== */
+    document.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      if (state.currentUser) {
+        setupAppForUser();
+      } else {
+        document.getElementById('loginView').style.display = 'flex';
+        document.getElementById('appView').style.display = 'none';
+      }
+    });
+  </script>
+<script>
+/* Skip artifact shell — fixed helpers served beside every artifact. */
+(function () {
+  "use strict";
+
+  var fmt = {
+    num: function (v, opts) { return new Intl.NumberFormat("pt-BR", opts || {}).format(v); },
+    brl: function (v) { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v); },
+    pct: function (v) { return new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1 }).format(v); }
+  };
+
+  // axisFmt keeps axis tick labels short (compact notation) so long values
+  // (e.g. full BRL amounts) never clip against the plot edge.
+  function axisFmt(v) {
+    return fmt.num(v, { notation: "compact", maximumFractionDigits: 1 });
+  }
+
+  // format accepts a function OR one of the fmt names ("num" | "brl" | "pct").
+  function coerceFormat(spec) {
+    if (typeof spec === "function") return spec;
+    if (typeof spec === "string" && fmt[spec]) return fmt[spec];
+    return function (v) { return fmt.num(v); };
+  }
+
+  function accent() {
+    return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2563eb";
+  }
+  function mutedColor() {
+    return getComputedStyle(document.documentElement).getPropertyValue("--text-muted").trim() || "#5b6472";
+  }
+  function svgEl(tag, attrs) {
+    var el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+  function frame(el, w, h) {
+    var svg = svgEl("svg", { viewBox: "0 0 " + w + " " + h, role: "img" });
+    el.innerHTML = "";
+    el.appendChild(svg);
+    return svg;
+  }
+
+  // maxOf guards the axis scale: empty values would give -Infinity (truthy,
+  // so "|| 1" can't catch it) and a non-positive max would flip the chart.
+  function maxOf(values) {
+    var m = values.length ? Math.max.apply(null, values) : 0;
+    return m > 0 ? m : 1;
+  }
+
+  // bar(el, {labels:[], values:[], color?, format?}) — vertical bar chart.
+  function bar(el, cfg) {
+    var W = 640, H = 280, padL = 46, padB = 30, padT = 12;
+    var svg = frame(el, W, H);
+    var max = maxOf(cfg.values);
+    var n = cfg.values.length;
+    var plotW = W - padL - 12, plotH = H - padT - padB;
+    var step = plotW / n, bw = Math.min(step * 0.62, 64);
+    var color = cfg.color || accent();
+    var f = coerceFormat(cfg.format);
+    for (var g = 0; g <= 4; g++) {
+      var gy = padT + plotH - (plotH * g) / 4;
+      svg.appendChild(svgEl("line", { x1: padL, y1: gy, x2: W - 12, y2: gy, stroke: "currentColor", "stroke-opacity": 0.08 }));
+      var lbl = svgEl("text", { x: padL - 8, y: gy + 4, "text-anchor": "end", "font-size": 10, fill: mutedColor() });
+      lbl.textContent = axisFmt((max * g) / 4);
+      svg.appendChild(lbl);
+    }
+    cfg.values.forEach(function (v, i) {
+      var bh = Math.max(0, (v / max) * plotH);
+      var x = padL + i * step + (step - bw) / 2;
+      var y = padT + plotH - bh;
+      var r = svgEl("rect", { x: x, y: y, width: bw, height: bh, rx: 4, fill: color });
+      var t = svgEl("title", {});
+      t.textContent = cfg.labels[i] + ": " + f(v);
+      r.appendChild(t);
+      svg.appendChild(r);
+      var tx = svgEl("text", { x: x + bw / 2, y: H - 10, "text-anchor": "middle", "font-size": 11, fill: mutedColor() });
+      tx.textContent = cfg.labels[i];
+      svg.appendChild(tx);
+    });
+  }
+
+  // line(el, {labels:[], values:[], color?, format?}) — single-series line.
+  function line(el, cfg) {
+    var W = 640, H = 280, padL = 46, padB = 30, padT = 12;
+    var svg = frame(el, W, H);
+    var max = maxOf(cfg.values);
+    var n = cfg.values.length;
+    var plotW = W - padL - 16, plotH = H - padT - padB;
+    var color = cfg.color || accent();
+    var f = coerceFormat(cfg.format);
+    for (var g = 0; g <= 4; g++) {
+      var gy = padT + plotH - (plotH * g) / 4;
+      svg.appendChild(svgEl("line", { x1: padL, y1: gy, x2: W - 16, y2: gy, stroke: "currentColor", "stroke-opacity": 0.08 }));
+      var lbl = svgEl("text", { x: padL - 8, y: gy + 4, "text-anchor": "end", "font-size": 10, fill: mutedColor() });
+      lbl.textContent = axisFmt((max * g) / 4);
+      svg.appendChild(lbl);
+    }
+    var pts = cfg.values.map(function (v, i) {
+      var x = padL + (n === 1 ? plotW / 2 : (plotW * i) / (n - 1));
+      var y = padT + plotH - (v / max) * plotH;
+      return [x, y];
+    });
+    var d = pts.map(function (p, i) { return (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" ");
+    svg.appendChild(svgEl("path", { d: d, fill: "none", stroke: color, "stroke-width": 2, "stroke-linejoin": "round" }));
+    pts.forEach(function (p, i) {
+      var c = svgEl("circle", { cx: p[0], cy: p[1], r: 3.5, fill: color });
+      var t = svgEl("title", {});
+      t.textContent = cfg.labels[i] + ": " + f(cfg.values[i]);
+      c.appendChild(t);
+      svg.appendChild(c);
+      var tx = svgEl("text", { x: p[0], y: H - 10, "text-anchor": "middle", "font-size": 11, fill: mutedColor() });
+      tx.textContent = cfg.labels[i];
+      svg.appendChild(tx);
+    });
+  }
+
+  // donut(el, {labels:[], values:[], colors?}) — donut with center total.
+  function donut(el, cfg) {
+    var W = 320, H = 280, cx = W / 2, cy = H / 2, R = 92, r = 58;
+    var svg = frame(el, W, H);
+    var total = cfg.values.reduce(function (a, b) { return a + b; }, 0) || 1;
+    var palette = cfg.colors || [accent(), "#1baf7a", "#eda100", "#e34948", "#4a3aa7", "#e87ba4"];
+    var a0 = -Math.PI / 2;
+    cfg.values.forEach(function (v, i) {
+      var a1 = a0 + (v / total) * Math.PI * 2;
+      var large = a1 - a0 > Math.PI ? 1 : 0;
+      var p = ["M", cx + R * Math.cos(a0), cy + R * Math.sin(a0),
+        "A", R, R, 0, large, 1, cx + R * Math.cos(a1), cy + R * Math.sin(a1),
+        "L", cx + r * Math.cos(a1), cy + r * Math.sin(a1),
+        "A", r, r, 0, large, 0, cx + r * Math.cos(a0), cy + r * Math.sin(a0), "Z"].join(" ");
+      var path = svgEl("path", { d: p, fill: palette[i % palette.length] });
+      var t = svgEl("title", {});
+      t.textContent = cfg.labels[i] + ": " + fmt.num(v) + " (" + fmt.pct(v / total) + ")";
+      path.appendChild(t);
+      svg.appendChild(path);
+      a0 = a1;
+    });
+    var center = svgEl("text", { x: cx, y: cy + 5, "text-anchor": "middle", "font-size": 20, "font-weight": 650, fill: "currentColor" });
+    center.textContent = fmt.num(total);
+    svg.appendChild(center);
+  }
+
+  window.skipShell = { fmt: fmt };
+  window.skipChart = { bar: bar, line: line, donut: donut };
+})();
+
+</script>
+</body>
+</html>
